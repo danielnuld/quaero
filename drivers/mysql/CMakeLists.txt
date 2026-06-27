@@ -45,7 +45,9 @@ if(MYSQL_INCLUDE_DIR AND MYSQL_CLIENT_LIBRARY)
   target_include_directories(mysql_driver PRIVATE
     src ${CMAKE_SOURCE_DIR}/core/include)
   target_include_directories(mysql_driver SYSTEM PRIVATE ${MYSQL_INCLUDE_DIR})
-  target_link_libraries(mysql_driver PRIVATE ${MYSQL_CLIENT_LIBRARY})
+  # cjson supplies cJSON.h (used for DSN parsing); linking it propagates its
+  # include dir, exactly as the SQLite driver does.
+  target_link_libraries(mysql_driver PRIVATE ${MYSQL_CLIENT_LIBRARY} cjson)
   set_target_properties(mysql_driver PROPERTIES PREFIX "" OUTPUT_NAME "mysql")
   quaero_set_warnings(mysql_driver)
 else()
