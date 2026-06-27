@@ -1,0 +1,34 @@
+# Build (C / CMake)
+/build/
+/out/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+*.exe
+*.pdb
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# Frontend
+node_modules/
+/frontend/dist/
+*.tsbuildinfo
+.vite/
+
+# Editores / SO
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Secretos / config local
+*.local
+.env
+connections.json
