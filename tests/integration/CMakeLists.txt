@@ -38,5 +38,8 @@ if(TARGET mysql_driver)
     quaero_set_warnings(ssh_tunnel_integration_test)
     add_test(NAME ssh_tunnel_integration_test COMMAND ssh_tunnel_integration_test
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    # A forwarding bug could hang the handshake; fail fast instead of running
+    # until the CI job's global timeout.
+    set_tests_properties(ssh_tunnel_integration_test PROPERTIES TIMEOUT 90)
   endif()
 endif()

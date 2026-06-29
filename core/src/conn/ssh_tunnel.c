@@ -95,6 +95,26 @@ typedef pthread_t thread_t;
 #define FWD_BUF 16384
 #define MAX_FORWARDS 32
 
+/* Opt-in diagnostics: set QUAERO_SSH_DEBUG to trace the tunnel's milestones to
+   stderr. Off by default and silent in normal operation. */
+static int dbg_on(void)
+{
+    static int v = -1;
+    if (v < 0) {
+        const char *e = getenv("QUAERO_SSH_DEBUG");
+        v = (e != NULL && e[0] != '\0') ? 1 : 0;
+    }
+    return v;
+}
+#define DBG(...)                                       \
+    do {                                               \
+        if (dbg_on()) {                                \
+            fprintf(stderr, "[ssh_tunnel] " __VA_ARGS__); \
+            fputc('\n', stderr);                       \
+            fflush(stderr);                            \
+        }                                              \
+    } while (0)
+
 /* One forwarded connection: a local socket paired with a direct-tcpip channel,
    with a small pending buffer per direction so a would-block on either side
    never drops bytes or blocks the other forwards. */
@@ -310,6 +330,7 @@ static int forward_pump(forward_t *f)
         if (n > 0) {
             f->l2c_off = 0;
             f->l2c_len = (size_t)n;
+            DBG("local->channel %d bytes", (int)n);
         } else if (n == 0) {
             f->local_eof = 1;
         } else if (!SOCK_WOULDBLOCK) {
@@ -340,11 +361,13 @@ static int forward_pump(forward_t *f)
         if (n > 0) {
             f->c2l_off = 0;
             f->c2l_len = (size_t)n;
+            DBG("channel->local %d bytes", (int)n);
         } else if (n == 0) {
             if (libssh2_channel_eof(f->chan)) {
                 f->chan_eof = 1;
             }
         } else if (n != LIBSSH2_ERROR_EAGAIN) {
+            DBG("channel read error %d", (int)n);
             f->chan_eof = 1;
         }
     }
@@ -425,17 +448,22 @@ static THREAD_FN_RET forward_thread(void *arg)
                    which a tight spin here cannot pump — so it would never
                    complete. The target is local to the SSH server, so a blocking
                    open is quick; restore non-blocking for the data pump. */
+                DBG("accepted local connection; opening channel to %s:%d",
+                    t->target_host, t->target_port);
                 libssh2_session_set_blocking(t->session, 1);
                 LIBSSH2_CHANNEL *chan = libssh2_channel_direct_tcpip(
                     t->session, t->target_host, t->target_port);
                 libssh2_session_set_blocking(t->session, 0);
                 if (chan != NULL) {
+                    DBG("channel open ok (forward #%d)", nfwd);
                     set_nonblocking(ls);
                     forward_t *f = &forwards[nfwd++];
                     memset(f, 0, sizeof *f);
                     f->local = ls;
                     f->chan = chan;
                 } else {
+                    DBG("channel open FAILED (errno %d); dropping connection",
+                        libssh2_session_last_errno(t->session));
                     close_socket(ls);
                 }
             }
@@ -535,6 +563,7 @@ dbc_status ssh_tunnel_open(const ssh_config *cfg, ssh_tunnel **out,
         conn_copy_err(err, errcap, "could not create the SSH session");
         return DBC_ERR_CONN;
     }
+    DBG("connected to ssh server %s:%d; handshaking", cfg->host, cfg->port);
     libssh2_session_set_blocking(t->session, 1);
     if (libssh2_session_handshake(t->session, t->ssh_sock) != 0) {
         tunnel_free(t);
@@ -545,6 +574,7 @@ dbc_status ssh_tunnel_open(const ssh_config *cfg, ssh_tunnel **out,
     /* NOTE: host-key verification against a known_hosts store is not yet wired
        up; the first hop is trusted on connect. Tracked as a follow-up. */
 
+    DBG("handshake ok; authenticating user '%s' (auth %d)", cfg->user, cfg->auth);
     if (authenticate(t->session, cfg) != 0) {
         tunnel_free(t);
         conn_copy_err(err, errcap, "SSH authentication failed");
@@ -566,6 +596,8 @@ dbc_status ssh_tunnel_open(const ssh_config *cfg, ssh_tunnel **out,
         return DBC_ERR_CONN;
     }
     t->thread_started = 1;
+    DBG("authenticated; listening on 127.0.0.1:%d, forward thread started",
+        t->local_port);
 
     *out = t;
     *out_local_port = t->local_port;

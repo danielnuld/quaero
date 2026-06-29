@@ -66,8 +66,13 @@ int main(void)
     dbcore_runtime_reset();
     dbcore_runtime_register_driver(dbcore_runtime_get(), drv);
 
+    /* Progress markers (flushed) so a hang shows its last reached phase in the
+       CI log when the test times out. */
+#define STEP(msg) do { fprintf(stderr, "STEP: %s\n", (msg)); fflush(stderr); } while (0)
+
     /* conn.open: the dsn carries ssh_* fields, so the core stands up the tunnel
        and the driver connects to 127.0.0.1:<local_port> behind it. */
+    STEP("opening connection through tunnel");
     char conn_id[32] = {0};
     {
         char req[2048];
@@ -97,6 +102,8 @@ int main(void)
         return 1;
     }
 
+    STEP("connection open; running query through tunnel");
+
     /* A real round-trip THROUGH the forward: SELECT 1 must come back as "1". */
     {
         char req[512];
@@ -114,6 +121,8 @@ int main(void)
                "SELECT 1 returns 1 through the tunnel");
         cJSON_Delete(root);
     }
+
+    STEP("query done; closing connection (tears down tunnel)");
 
     /* conn.close tears the driver connection down and then the tunnel. */
     {
