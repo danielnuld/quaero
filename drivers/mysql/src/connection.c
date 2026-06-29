@@ -93,7 +93,14 @@ static int configure_ssl(dbc_conn *c, const cJSON *root)
         return -1;
     }
 
-    if (ca != NULL || cert != NULL || key != NULL) {
+    /* mysql_ssl_set is what actually arms the client's TLS subsystem in MariaDB
+       Connector/C; MYSQL_OPT_SSL_MODE/ENFORCE alone do not. Call it whenever the
+       mode wants encryption (even with no certs) or any cert was provided, so
+       ssl_mode=required negotiates TLS instead of silently staying plaintext. */
+    int want_tls = (mode == MYSQL_SSL_REQUIRED ||
+                    mode == MYSQL_SSL_VERIFY_CA ||
+                    mode == MYSQL_SSL_VERIFY_IDENTITY);
+    if (want_tls || ca != NULL || cert != NULL || key != NULL) {
         mysql_ssl_set(c->db, key, cert, ca, NULL, NULL);
     }
     free(ca);
