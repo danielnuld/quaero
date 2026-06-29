@@ -341,13 +341,17 @@ static int forward_pump(forward_t *f)
         ssize_t w = libssh2_channel_write(f->chan, f->l2c + f->l2c_off,
                                           f->l2c_len - f->l2c_off);
         if (w == LIBSSH2_ERROR_EAGAIN) {
+            DBG("channel_write EAGAIN (%d bytes pending)",
+                (int)(f->l2c_len - f->l2c_off));
             break;
         }
         if (w < 0) {
+            DBG("channel_write error %d", (int)w);
             f->local_eof = 1;
             f->l2c_off = f->l2c_len = 0;
             break;
         }
+        DBG("wrote %d bytes to channel", (int)w);
         f->l2c_off += (size_t)w;
     }
     if (f->local_eof && f->l2c_len == f->l2c_off) {
@@ -410,7 +414,15 @@ static THREAD_FN_RET forward_thread(void *arg)
         FD_ZERO(&rfds);
         FD_ZERO(&wfds);
         FD_SET(t->listen_sock, &rfds);
-        FD_SET(t->ssh_sock, &rfds); /* wake when channel data may be ready */
+        /* Always watch ssh_sock for read; also watch it for write when libssh2
+           reports it has outbound work blocked on socket writability — otherwise
+           a channel_write stuck on EAGAIN never gets a chance to flush and the
+           forward stalls mid-handshake. */
+        FD_SET(t->ssh_sock, &rfds);
+        if (libssh2_session_block_directions(t->session) &
+            LIBSSH2_SESSION_BLOCK_OUTBOUND) {
+            FD_SET(t->ssh_sock, &wfds);
+        }
         socket_t maxfd =
             t->listen_sock > t->ssh_sock ? t->listen_sock : t->ssh_sock;
         for (int i = 0; i < nfwd; i++) {
