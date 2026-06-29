@@ -420,19 +420,15 @@ static THREAD_FN_RET forward_thread(void *arg)
         if (FD_ISSET(t->listen_sock, &rfds) && nfwd < MAX_FORWARDS) {
             socket_t ls = accept(t->listen_sock, NULL, NULL);
             if (ls != BAD_SOCKET) {
-                LIBSSH2_CHANNEL *chan = NULL;
-                /* The session is non-blocking; spin briefly for the channel. */
-                for (int tries = 0; tries < 1000 && !t->stop; tries++) {
-                    chan = libssh2_channel_direct_tcpip(
-                        t->session, t->target_host, t->target_port);
-                    if (chan != NULL) {
-                        break;
-                    }
-                    if (libssh2_session_last_errno(t->session) !=
-                        LIBSSH2_ERROR_EAGAIN) {
-                        break;
-                    }
-                }
+                /* Open the channel in blocking mode. A non-blocking open returns
+                   EAGAIN until the server's confirmation is read off ssh_sock,
+                   which a tight spin here cannot pump — so it would never
+                   complete. The target is local to the SSH server, so a blocking
+                   open is quick; restore non-blocking for the data pump. */
+                libssh2_session_set_blocking(t->session, 1);
+                LIBSSH2_CHANNEL *chan = libssh2_channel_direct_tcpip(
+                    t->session, t->target_host, t->target_port);
+                libssh2_session_set_blocking(t->session, 0);
                 if (chan != NULL) {
                     set_nonblocking(ls);
                     forward_t *f = &forwards[nfwd++];
