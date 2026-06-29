@@ -1,3 +1,9 @@
+/* POSIX networking (getaddrinfo/struct addrinfo/ssize_t) is hidden by strict
+   -std=c11 on glibc; request the default feature set before any system header.
+   Harmless on Windows/macOS. Must precede every #include. */
+#define _DEFAULT_SOURCE
+#define _POSIX_C_SOURCE 200112L
+
 #include "ssh_tunnel.h"
 
 #include "conn_util.h"
