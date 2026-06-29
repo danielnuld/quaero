@@ -90,6 +90,22 @@ int main(void)
         return 1;
     }
 
+    /* Diagnostic: does the server even offer TLS? (YES vs DISABLED) */
+    {
+        char req[512];
+        snprintf(req, sizeof req,
+                 "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"query.run\","
+                 "\"params\":{\"connId\":\"%s\","
+                 "\"sql\":\"SHOW GLOBAL VARIABLES LIKE 'have_ssl'\"}}",
+                 conn_id);
+        cJSON *root = call(req);
+        cJSON *rows = cJSON_GetObjectItem(result_of(root), "rows");
+        cJSON *v = cJSON_GetArrayItem(cJSON_GetArrayItem(rows, 0), 1);
+        fprintf(stderr, "server have_ssl = %s\n",
+                cJSON_IsString(v) ? v->valuestring : "?");
+        cJSON_Delete(root);
+    }
+
     /* Ssl_cipher is empty on a plaintext connection and a cipher name over TLS. */
     {
         char req[512];

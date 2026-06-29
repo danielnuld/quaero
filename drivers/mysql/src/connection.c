@@ -111,10 +111,24 @@ static int configure_ssl(dbc_conn *c, const cJSON *root)
         default:                        m = SSL_MODE_REQUIRED; break;
         }
         mysql_options(c->db, MYSQL_OPT_SSL_MODE, &m);
-#else
-        /* No SSL_MODE on this (old) client: certificates above still take
-           effect, but the mode cannot be enforced here. */
-        (void)0;
+#endif
+        /* MariaDB Connector/C honours SSL_MODE inconsistently across versions;
+           its native enforcement knobs are MYSQL_OPT_SSL_ENFORCE (encrypt) and
+           MYSQL_OPT_SSL_VERIFY_SERVER_CERT (verify the cert). Set them too where
+           present — both are MariaDB-only, so my_bool is available there. */
+#ifdef MYSQL_OPT_SSL_ENFORCE
+        {
+            my_bool enforce = (mode != MYSQL_SSL_DISABLED) ? 1 : 0;
+            mysql_options(c->db, MYSQL_OPT_SSL_ENFORCE, &enforce);
+        }
+#endif
+#ifdef MYSQL_OPT_SSL_VERIFY_SERVER_CERT
+        {
+            my_bool verify =
+                (mode == MYSQL_SSL_VERIFY_CA || mode == MYSQL_SSL_VERIFY_IDENTITY)
+                    ? 1 : 0;
+            mysql_options(c->db, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
+        }
 #endif
     }
     return 0;
