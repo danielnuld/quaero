@@ -354,9 +354,14 @@ static int forward_pump(forward_t *f)
         DBG("wrote %d bytes to channel", (int)w);
         f->l2c_off += (size_t)w;
     }
-    if (f->local_eof && f->l2c_len == f->l2c_off) {
-        libssh2_channel_send_eof(f->chan);
-        f->l2c_len = f->l2c_off = 0;
+    /* Fully drained to the channel: free the buffer so the next iteration can
+       recv more from the local socket. (Forgetting this reset wedges the
+       direction after the first chunk.) */
+    if (f->l2c_off == f->l2c_len) {
+        f->l2c_off = f->l2c_len = 0;
+        if (f->local_eof) {
+            libssh2_channel_send_eof(f->chan);
+        }
     }
 
     /* channel -> local: read from the channel, then drain to the local socket. */
@@ -392,6 +397,11 @@ static int forward_pump(forward_t *f)
             f->c2l_len = f->c2l_off = 0;
             break;
         }
+    }
+    /* Fully drained to the local socket: free the buffer so the next iteration
+       reads the next chunk from the channel. */
+    if (f->c2l_off == f->c2l_len) {
+        f->c2l_off = f->c2l_len = 0;
     }
 
     /* Done when both directions are drained and closed. */
