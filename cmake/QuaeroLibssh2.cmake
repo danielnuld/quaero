@@ -15,6 +15,13 @@ include(FetchContent)
 function(quaero_enable_libssh2 target)
   set(_saved_build_testing "${BUILD_TESTING}")
 
+  # Our project compiles with strict ISO C (CMAKE_C_EXTENSIONS OFF => -std=c11),
+  # but libssh2's sources use BSD types (u_int/u_char) that glibc only exposes
+  # under a GNU/_DEFAULT_SOURCE dialect. Build libssh2 with extensions ON so it
+  # gets -std=gnu11; this normal variable is scoped to the libssh2 subdirectory
+  # added below and does not affect our own targets (already created).
+  set(CMAKE_C_EXTENSIONS ON)
+
   set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   set(BUILD_STATIC_LIBS ON CACHE BOOL "" FORCE)
   set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
