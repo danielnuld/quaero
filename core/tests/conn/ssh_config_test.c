@@ -85,6 +85,27 @@ int main(void)
         ssh_config_dispose(&c);
     }
 
+    /* --- numeric fields may arrive as strings (frontend sends DSN as strings) --- */
+    {
+        ssh_config c = {0};
+        const char *dsn =
+            "{\"host\":\"db\",\"port\":\"3307\",\"ssh_host\":\"h\","
+            "\"ssh_user\":\"u\",\"ssh_port\":\"2222\"}";
+        EXPECT(parse(dsn, &c) == DBC_OK, "string ports parse");
+        EXPECT(c.port == 2222, "ssh_port from string");
+        EXPECT(c.target_port == 3307, "target port from string dsn port");
+        ssh_config_dispose(&c);
+    }
+
+    /* --- a non-numeric port string is ignored (falls back to default) --- */
+    {
+        ssh_config c = {0};
+        const char *dsn = "{\"ssh_host\":\"h\",\"ssh_user\":\"u\",\"ssh_port\":\"abc\"}";
+        EXPECT(parse(dsn, &c) == DBC_OK, "garbage port parses");
+        EXPECT(c.port == 22, "non-numeric ssh_port falls back to 22");
+        ssh_config_dispose(&c);
+    }
+
     /* --- password auth --- */
     {
         ssh_config c = {0};

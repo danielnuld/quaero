@@ -31,12 +31,21 @@ static char *dup_field(const cJSON *root, const char *key, int *oom)
     return copy;
 }
 
-/* Positive integer field, or 0 when absent/non-positive. */
+/* Positive port-range integer (1..65535), or 0 when absent/out of range.
+   Accepts both a JSON number and a decimal string: the frontend ships DSN
+   values as strings (Record<string,string>), so a port may arrive as "2222". */
 static int int_field(const cJSON *root, const char *key)
 {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, key);
-    if (cJSON_IsNumber(item) && item->valueint > 0) {
+    if (cJSON_IsNumber(item) && item->valueint > 0 && item->valueint <= 65535) {
         return item->valueint;
+    }
+    if (cJSON_IsString(item) && item->valuestring != NULL) {
+        char *end = NULL;
+        long v = strtol(item->valuestring, &end, 10);
+        if (end != item->valuestring && *end == '\0' && v > 0 && v <= 65535) {
+            return (int)v;
+        }
     }
     return 0;
 }
