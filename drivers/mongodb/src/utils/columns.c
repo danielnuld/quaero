@@ -81,11 +81,12 @@ int mongo_columns_observe(mongo_columns *c, const char *name)
         return -1;
     }
 
-    char *copy = malloc(strlen(name) + 1);
+    size_t len = strlen(name) + 1;
+    char *copy = malloc(len);
     if (copy == NULL) {
         return -1;
     }
-    strcpy(copy, name);
+    memcpy(copy, name, len);
 
     int hoist = strcmp(name, "_id") == 0;
     if (hoist && c->count > 0) {
