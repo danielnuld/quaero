@@ -103,6 +103,12 @@ static char *dup_range(const char *start, const char *end)
     return s;
 }
 
+/* Owned copy of a whole C string, or NULL on OOM. */
+static char *dup_cstr(const char *s)
+{
+    return dup_range(s, s + strlen(s));
+}
+
 /* Trim leading/trailing whitespace in place, returning the (possibly shifted)
    start; the string is mutated so the trailing space becomes a NUL. */
 static char *trim(char *s)
@@ -215,13 +221,12 @@ static int parse_chain(const char *p, mongo_query *out, char *errbuf, size_t err
 
         if (namelen == 4 && strncmp(name, "sort", 4) == 0) {
             free(out->sort);
-            out->sort = malloc(strlen(arg) + 1);
+            out->sort = dup_cstr(arg);
             if (out->sort == NULL) {
                 free(raw);
                 set_err(errbuf, errlen, "out of memory");
                 return 1;
             }
-            strcpy(out->sort, arg);
             free(raw);
         } else if ((namelen == 5 && strncmp(name, "limit", 5) == 0) ||
                    (namelen == 4 && strncmp(name, "skip", 4) == 0)) {
@@ -340,13 +345,11 @@ int mongo_query_parse(const char *input, mongo_query *out, char *errbuf, size_t 
             goto fail;
         }
         if (argc == 0) {
-            out->filter = dup_range("[]", "[]" + 2);
+            out->filter = dup_cstr("[]");
         } else {
             char *raw = dup_range(starts[0], ends[0]);
             if (raw == NULL) { set_err(errbuf, errlen, "out of memory"); goto fail; }
-            char *t = trim(raw);
-            out->filter = malloc(strlen(t) + 1);
-            if (out->filter != NULL) { strcpy(out->filter, t); }
+            out->filter = dup_cstr(trim(raw));
             free(raw);
         }
         if (out->filter == NULL) { set_err(errbuf, errlen, "out of memory"); goto fail; }
@@ -365,19 +368,17 @@ int mongo_query_parse(const char *input, mongo_query *out, char *errbuf, size_t 
         goto fail;
     }
     if (argc == 0) {
-        out->filter = dup_range("{}", "{}" + 2);
+        out->filter = dup_cstr("{}");
     } else {
         char *raw = dup_range(starts[0], ends[0]);
         if (raw == NULL) { set_err(errbuf, errlen, "out of memory"); goto fail; }
-        char *t = trim(raw);
-        out->filter = malloc(strlen(t) + 1);
-        if (out->filter != NULL) { strcpy(out->filter, t); }
+        out->filter = dup_cstr(trim(raw));
         free(raw);
     }
     if (out->filter == NULL) { set_err(errbuf, errlen, "out of memory"); goto fail; }
     if (out->filter[0] == '\0') {
         free(out->filter);
-        out->filter = dup_range("{}", "{}" + 2);
+        out->filter = dup_cstr("{}");
         if (out->filter == NULL) { set_err(errbuf, errlen, "out of memory"); goto fail; }
     }
     if (argc == 2) {
@@ -385,8 +386,7 @@ int mongo_query_parse(const char *input, mongo_query *out, char *errbuf, size_t 
         if (raw == NULL) { set_err(errbuf, errlen, "out of memory"); goto fail; }
         char *t = trim(raw);
         if (t[0] != '\0') {
-            out->projection = malloc(strlen(t) + 1);
-            if (out->projection != NULL) { strcpy(out->projection, t); }
+            out->projection = dup_cstr(t);
         }
         free(raw);
         if (t[0] != '\0' && out->projection == NULL) {

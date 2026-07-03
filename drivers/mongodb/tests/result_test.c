@@ -19,8 +19,9 @@ static int failures = 0;
 /* Helper: an owned copy of a literal, as the mongoc layer would hand over. */
 static char *own(const char *s)
 {
-    char *p = malloc(strlen(s) + 1);
-    strcpy(p, s);
+    size_t n = strlen(s) + 1;
+    char *p = malloc(n);
+    memcpy(p, s, n);
     return p;
 }
 
