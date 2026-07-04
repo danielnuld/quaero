@@ -235,4 +235,32 @@ describe("ResultGrid sort + filter (issue #132)", () => {
     type(filter, "zzz");
     expect(host!.querySelector(".grid-empty-filter")).not.toBeNull();
   });
+
+  it("re-renders fresh values when the result is replaced in place (same size)", () => {
+    // Guards against the index-keyed <For> reusing a stale row snapshot when a
+    // new query returns a result of the same length in the same mounted grid.
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const first: ResultSet = {
+      columns: [{ name: "city", type: "text" }],
+      rows: [["Hermosillo"], ["Guaymas"]],
+      truncated: false,
+      rowsAffected: 0,
+    };
+    const second: ResultSet = {
+      columns: [{ name: "city", type: "text" }],
+      rows: [["Nogales"], ["Obregon"]],
+      truncated: false,
+      rowsAffected: 0,
+    };
+    const [result, setResult] = createSignal<ResultSet>(first);
+    createRoot((d) => {
+      dispose = d;
+      render(() => <ResultGrid result={result()} loading={false} error={null} />, host!);
+    });
+    expect(host!.textContent).toContain("Hermosillo");
+    setResult(second);
+    expect(host!.textContent).toContain("Nogales");
+    expect(host!.textContent).not.toContain("Hermosillo");
+  });
 });

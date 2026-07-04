@@ -109,7 +109,9 @@ export function ResultGrid(props: {
 
   createEffect(() => {
     const r = props.result;
-    if (props.onNeedMore && r && needsMoreRows(range().end, view().length, r.truncated)) {
+    // Trigger fetch off the actual loaded-row count, not the (possibly filtered)
+    // view length, so a heavy filter doesn't look like "end of the loaded page".
+    if (props.onNeedMore && r && needsMoreRows(range().end, rows().length, r.truncated)) {
       props.onNeedMore();
     }
   });
@@ -149,8 +151,14 @@ export function ResultGrid(props: {
                     {(col, ci) => (
                       <div
                         class="grid-cell grid-head grid-head-sort"
+                        role="button"
+                        tabindex={0}
                         title="Ordenar (asc / desc / ninguno)"
                         onClick={() => toggleSort(ci())}
+                        onKeyDown={(e) =>
+                          (e.key === "Enter" || e.key === " ") &&
+                          (e.preventDefault(), toggleSort(ci()))
+                        }
                       >
                         <span class="col-name">{col.name}</span>
                         <span class="col-type">{col.type}</span>
@@ -191,7 +199,10 @@ export function ResultGrid(props: {
                     <For each={view().slice(range().start, range().end)}>
                       {(origIndex) => {
                         const rowIndex = () => origIndex;
-                        const row = rows()[origIndex];
+                        // Reactive lookup: the <For> keys by index value, so this
+                        // callback is reused across queries — read the live rows()
+                        // each render, never a stale snapshot.
+                        const row = () => rows()[origIndex];
                         return (
                           <div
                             class={`grid-row ${isDeleted(rowIndex()) ? "row-deleted" : ""}`}
@@ -208,7 +219,7 @@ export function ResultGrid(props: {
                             </Show>
                             <For each={cols()}>
                               {(col, ci) => {
-                                const original = () => row[ci()] ?? null;
+                                const original = () => row()[ci()] ?? null;
                                 return (
                                   <Show
                                     when={editing()}

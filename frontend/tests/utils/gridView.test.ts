@@ -12,11 +12,11 @@ import type { ResultColumn } from "../../src/utils/query";
 const cols = (types: string[]): ResultColumn[] => types.map((t, i) => ({ name: `c${i}`, type: t }));
 
 describe("isNumericType", () => {
-  it("recognizes numeric neutral types", () => {
+  it("recognizes the numeric neutral types the core sends (int/float)", () => {
     expect(isNumericType("int")).toBe(true);
     expect(isNumericType("FLOAT")).toBe(true);
-    expect(isNumericType("decimal")).toBe(true);
     expect(isNumericType("text")).toBe(false);
+    expect(isNumericType("timestamp")).toBe(false);
     expect(isNumericType("")).toBe(false);
   });
 });

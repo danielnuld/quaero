@@ -10,6 +10,7 @@
 // regardless of the current sort or filter.
 
 import type { ResultColumn } from "./query";
+import { classifyType } from "./format";
 
 export type SortDir = "asc" | "desc";
 export interface SortState {
@@ -21,22 +22,10 @@ export interface SortState {
 /** Per-column filter text, keyed by column index. Blank entries are ignored. */
 export type ColumnFilters = Record<number, string>;
 
-const NUMERIC_TYPES = new Set([
-  "int",
-  "integer",
-  "bigint",
-  "smallint",
-  "number",
-  "numeric",
-  "decimal",
-  "float",
-  "double",
-  "real",
-]);
-
-/** Whether a neutral column type sorts numerically rather than as text. */
+/** Whether a neutral column type sorts numerically rather than as text. Single-
+    sourced from the cell classifier so the numeric set never drifts. */
 export function isNumericType(type: string): boolean {
-  return NUMERIC_TYPES.has((type || "").toLowerCase());
+  return classifyType(type) === "number";
 }
 
 /**
