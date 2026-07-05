@@ -387,6 +387,15 @@ export function App() {
     return connections().find((c) => c.id === id)?.driver ?? "";
   });
 
+  // Document/window title (issue #192): "Quaero — <conexión activa>" when a
+  // connection is active, else just "Quaero". The native shell window title is
+  // set to "Quaero" in main.cc; this keeps the document title in sync so the
+  // active connection is reflected wherever the title surfaces.
+  createEffect(() => {
+    const conn = active();
+    document.title = conn?.name ? `Quaero — ${conn.name}` : "Quaero";
+  });
+
   // SQL autocomplete schema (issue #110): built in the background from the active
   // connection's object tree, rebuilt on connection switch and on refresh (F5).
   const [sqlSchema, setSqlSchema] = createSignal<Record<string, string[]>>({});
