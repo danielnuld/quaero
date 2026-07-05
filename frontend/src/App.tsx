@@ -106,6 +106,7 @@ import { ResultGrid } from "./components/ResultGrid";
 import { StatusBar } from "./components/StatusBar";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { EmptyState } from "./components/EmptyState";
+import { BrandWordmark } from "./components/Brand";
 import { CommandPalette } from "./components/CommandPalette";
 import { SlowQueries } from "./components/SlowQueries";
 import { ExplainPlan } from "./components/ExplainPlan";
@@ -1754,7 +1755,13 @@ export function App() {
           </Show>
 
           <Show when={!current()}>
-            <div class="grid-empty">Abre una pestaña de consulta.</div>
+            <div class="workspace-welcome">
+              <BrandWordmark height={56} />
+              <p class="welcome-tagline">Consulta cualquier base de datos.</p>
+              <p class="welcome-hint">
+                Abre una conexión desde la barra lateral o crea una pestaña de consulta para empezar.
+              </p>
+            </div>
           </Show>
           </div>
         </section>

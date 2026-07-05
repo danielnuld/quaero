@@ -54,7 +54,8 @@ WCAG AA para su uso previsto.
 | Rol | Claro (`#`) | Oscuro (`#`) | Uso |
 |---|---|---|---|
 | **Índigo (acento)** | `#5b5bd6` | `#7c7cf0` | Color de marca. Acento de UI, botones, selección, logo. |
-| Índigo hover | `#4a4ac4` | `#9a9aff` | Estado hover/activo del acento. |
+| Texto sobre acento | `#ffffff` | `#1e1e24` | Color de texto/icono que va ENCIMA de un relleno de acento (`--accent-fg`). En claro, blanco sobre `#5b5bd6` = 5.4:1; en oscuro, tinta sobre `#7c7cf0` = 4.8:1. Ambos AA. |
+| Índigo hover | `#4a4ac4` | `#9a9aff` | Estado hover/activo del acento (`--accent-hover`). |
 | Tinta (texto) | `#1e1e24` | `#e6e6ec` | Texto del wordmark y titulares. |
 | Papel (fondo) | `#f7f7fa` | `#1e1e24` | Fondo. |
 
