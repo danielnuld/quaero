@@ -122,11 +122,11 @@ export function qualifiedName(
 ): string {
   const q = (s: string) => quoteIdentifier(s, engine);
   if (engineFamily(engine ?? "") === "informix") {
-    const ownerTable = [parts.schema, parts.name]
-      .filter((p): p is string => !!p)
-      .map(q)
-      .join(".");
-    return parts.db ? `${q(parts.db)}:${ownerTable}` : ownerTable;
+    // Informix: `database:table`, bare, and WITHOUT the owner. The name is
+    // unambiguous within a database, and an owner-qualified reference stalls on
+    // some servers (an owner-qualified cross-database catalog lookup can block),
+    // so the owner is dropped rather than emitted.
+    return parts.db ? `${q(parts.db)}:${q(parts.name)}` : q(parts.name);
   }
   return [parts.db, parts.schema, parts.name]
     .filter((p): p is string => !!p)

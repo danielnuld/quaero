@@ -31,7 +31,7 @@ describe("objectPreviewQuery", () => {
     );
     expect(
       objectPreviewQuery({ db: "prod", schema: "informix", name: "customer" }, "informix", 1000),
-    ).toBe("SELECT FIRST 1000 * FROM prod:informix.customer;");
+    ).toBe("SELECT FIRST 1000 * FROM prod:customer;");
   });
 
   it("builds a mongosh find().limit() for MongoDB (no SQL surface)", () => {

@@ -84,13 +84,12 @@ describe("qualifiedName", () => {
     expect(qualifiedName({ db: "app", name: "users" }, "mysql")).toBe("`app`.`users`");
     expect(qualifiedName({ name: "users" }, "postgres")).toBe('"users"');
   });
-  it("separates the database with a colon and stays bare on Informix", () => {
+  it("uses database:table on Informix, bare and without the owner", () => {
+    // The owner is dropped: an owner-qualified reference stalls on some servers.
     expect(qualifiedName({ db: "prod", schema: "informix", name: "customer" }, "informix")).toBe(
-      "prod:informix.customer",
+      "prod:customer",
     );
-    expect(qualifiedName({ schema: "informix", name: "customer" }, "informix")).toBe(
-      "informix.customer",
-    );
+    expect(qualifiedName({ schema: "informix", name: "customer" }, "informix")).toBe("customer");
     expect(qualifiedName({ name: "customer" }, "informix")).toBe("customer");
   });
 });
