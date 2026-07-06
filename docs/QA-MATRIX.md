@@ -25,14 +25,14 @@ SQL preparado, pero el driver no se distribuye aún.
 
 | Funcionalidad | SQLite | MySQL/MariaDB | Informix | MongoDB |
 |---|:---:|:---:|:---:|:---:|
-| Conexión / desconexión / reconexión | ⏳ | ⏳ | ⏳ | ⏳ |
-| Árbol de objetos + carpetas por tipo | ⚠️ 1 | ⏳ | ⚠️ 2 | ⚠️ 3 |
-| Describe / estructura / DDL | ⏳ | ⏳ | ⏳ | ⚠️ 4 |
-| Ejecutar consulta | ⏳ | ⏳ | ⏳ | ⚠️ 5 |
-| Paginación real (offset) | ⏳ | ⏳ | ⏳ | ⏳ |
-| Edición transaccional (insert/update/delete + rollback) | ⏳ | ⏳ | ⏳ | ➖ 6 |
+| Conexión / desconexión / reconexión | ✅ | ✅ | ⏳ | ⏳ |
+| Árbol de objetos + carpetas por tipo | ⚠️ 1 | ✅ | ⚠️ 2 | ⚠️ 3 |
+| Describe / estructura / DDL | ✅ | ✅ | ⏳ | ⚠️ 4 |
+| Ejecutar consulta | ✅ | ✅ | ⏳ | ⚠️ 5 |
+| Paginación real (offset) | ✅ | ✅ | ⏳ | ⏳ |
+| Edición transaccional (insert/update/delete + rollback) | ✅ | ✅ | ⏳ | ➖ 6 |
 | Detalle de fila (form view) | ⏳ | ⏳ | ⏳ | ⚠️ 7 |
-| Export CSV / JSON / SQL / XML / HTML / XLSX | ⏳ | ⏳ | ⏳ | ⏳ 8 |
+| Export CSV / JSON / SQL / XML / HTML / XLSX | ✅ 8 | ✅ 8 | ⏳ | ⏳ 8 |
 | Import CSV / JSON / XLSX | ⏳ | ⏳ | ⏳ | ➖ 6 |
 | Generación de datos | ⏳ | ⏳ | ⏳ | ➖ 6 |
 | Sort / filtro de grid | ⏳ 8 | ⏳ 8 | ⏳ 8 | ⏳ 8 |
@@ -102,9 +102,13 @@ Describe, Ejecutar consulta, Paginación, Edición transaccional, Export.
 
 | Motor | Smoke | Notas |
 |---|:---:|---|
-| SQLite | ⏳ | local, sin contenedor |
-| MySQL/MariaDB | ⏳ | contenedor `mysql:8` / `mariadb` |
-| Informix | ⏳ | requiere build x86 + servidor |
-| MongoDB | ⏳ | camino reducido (lectura): conectar → árbol → describe → find paginado → export |
+| SQLite | ✅ 12/12 | local, sin contenedor (2026-07-05) |
+| MySQL/MariaDB | ✅ 12/12 | contra `mysql:8` en :13306 (2026-07-05) |
+| Informix | ⏳ | el driver carga; falta servidor Informix de prueba |
+| MongoDB | ⏳ | requiere driver con libmongoc + contenedor mongo |
 
-_Última actualización: 2026-07-05 (creación, issue #194)._
+Ver [QA-SMOKE.md](./QA-SMOKE.md) para correrlo. Las filas ✅ de SQLite y
+MySQL/MariaDB arriba (conexión, árbol, describe, consulta, paginación, edición
+transaccional, export) están verificadas por este smoke.
+
+_Última actualización: 2026-07-05 (issue #194 + smoke #199: SQLite y MySQL verificados)._
