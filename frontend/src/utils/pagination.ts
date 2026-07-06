@@ -9,6 +9,7 @@
 // quoted, fully-qualified table reference.
 
 import { engineFamily } from "./engineFamily";
+import { qualifiedName } from "./schema";
 
 /**
  * A capped `SELECT *` over `qualified` for a data preview, in the dialect of
@@ -21,4 +22,23 @@ export function previewSelect(qualified: string, engine: string, limit: number):
     return `SELECT FIRST ${n} * FROM ${qualified};`;
   }
   return `SELECT * FROM ${qualified} LIMIT ${n};`;
+}
+
+/**
+ * The query that opens an object's data, capped, in the engine's own surface.
+ * Relational engines get a qualified, capped SELECT (see previewSelect +
+ * qualifiedName). MongoDB has no SQL surface: its driver parses
+ * `db.<collection>.find(...)` with an optional chained `.limit()`, and the
+ * collection is scoped by the connected database (the mongosh `db` keyword).
+ */
+export function objectPreviewQuery(
+  parts: { db?: string; schema?: string; name: string },
+  engine: string,
+  limit: number,
+): string {
+  const n = Math.max(1, Math.floor(limit));
+  if (engineFamily(engine) === "mongodb") {
+    return `db.${parts.name}.find({}).limit(${n})`;
+  }
+  return previewSelect(qualifiedName(parts, engine), engine, n);
 }

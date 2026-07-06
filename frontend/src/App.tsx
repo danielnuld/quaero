@@ -70,8 +70,8 @@ import { rowHeightFor, type Settings } from "./utils/settings";
 import { loadSettings, saveSettings } from "./utils/settingsStore";
 import { pushRecent } from "./utils/recentTables";
 import type { Command } from "./utils/commandPalette";
-import { qualifiedName, schemaDescribe, schemaTree, parseTreeRows } from "./utils/schema";
-import { previewSelect } from "./utils/pagination";
+import { schemaDescribe, schemaTree, parseTreeRows } from "./utils/schema";
+import { objectPreviewQuery } from "./utils/pagination";
 import { useDatabaseSql } from "./utils/dbContext";
 import {
   describePkColumns,
@@ -842,14 +842,14 @@ export function App() {
   const openData = (node: TreeNode) => {
     recordRecent(node);
     syncWorkingDb(node.db);
-    // Qualify per engine (Informix uses db:owner.table with bare identifiers;
-    // others db.schema.table quoted — see qualifiedName), then cap the preview
-    // per dialect (Informix SELECT FIRST n, others LIMIT n — see previewSelect).
-    const qualified = qualifiedName(
+    // The capped preview query in the engine's own surface: a qualified SELECT
+    // for relational engines (Informix uses db:owner.table + FIRST), or
+    // db.<collection>.find().limit() for MongoDB (see objectPreviewQuery).
+    const sql = objectPreviewQuery(
       { db: node.db, schema: node.schema, name: node.label },
       activeDialect(),
+      PAGE_LIMIT,
     );
-    const sql = previewSelect(qualified, activeDialect(), PAGE_LIMIT);
     let newId = 0;
     setTabs((s) => {
       const added = addTab(s);
