@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import {
   parseTreeRows,
   quoteIdentifier,
+  qualifiedName,
   schemaDdl,
   schemaTree,
   schemaDescribe,
@@ -68,6 +69,29 @@ describe("quoteIdentifier", () => {
   });
   it("quotes an empty identifier", () => {
     expect(quoteIdentifier("")).toBe('""');
+  });
+  it("leaves Informix identifiers bare (no delimited identifiers by default)", () => {
+    expect(quoteIdentifier("customer", "informix")).toBe("customer");
+    expect(quoteIdentifier("Customer", "INFORMIX")).toBe("Customer");
+  });
+});
+
+describe("qualifiedName", () => {
+  it("dot-joins quoted parts for LIMIT-dialect engines", () => {
+    expect(qualifiedName({ db: "app", schema: "dbo", name: "users" }, "sqlite")).toBe(
+      '"app"."dbo"."users"',
+    );
+    expect(qualifiedName({ db: "app", name: "users" }, "mysql")).toBe("`app`.`users`");
+    expect(qualifiedName({ name: "users" }, "postgres")).toBe('"users"');
+  });
+  it("separates the database with a colon and stays bare on Informix", () => {
+    expect(qualifiedName({ db: "prod", schema: "informix", name: "customer" }, "informix")).toBe(
+      "prod:informix.customer",
+    );
+    expect(qualifiedName({ schema: "informix", name: "customer" }, "informix")).toBe(
+      "informix.customer",
+    );
+    expect(qualifiedName({ name: "customer" }, "informix")).toBe("customer");
   });
 });
 

@@ -70,7 +70,7 @@ import { rowHeightFor, type Settings } from "./utils/settings";
 import { loadSettings, saveSettings } from "./utils/settingsStore";
 import { pushRecent } from "./utils/recentTables";
 import type { Command } from "./utils/commandPalette";
-import { quoteIdentifier, schemaDescribe, schemaTree, parseTreeRows } from "./utils/schema";
+import { qualifiedName, schemaDescribe, schemaTree, parseTreeRows } from "./utils/schema";
 import { previewSelect } from "./utils/pagination";
 import { useDatabaseSql } from "./utils/dbContext";
 import {
@@ -842,12 +842,13 @@ export function App() {
   const openData = (node: TreeNode) => {
     recordRecent(node);
     syncWorkingDb(node.db);
-    const qualified = [node.db, node.schema, node.label]
-      .filter((p): p is string => !!p)
-      .map((p) => quoteIdentifier(p, activeDialect()))
-      .join(".");
-    // Cap the preview per the engine's dialect: Informix uses SELECT FIRST n,
-    // everyone else LIMIT n (see utils/pagination.ts).
+    // Qualify per engine (Informix uses db:owner.table with bare identifiers;
+    // others db.schema.table quoted — see qualifiedName), then cap the preview
+    // per dialect (Informix SELECT FIRST n, others LIMIT n — see previewSelect).
+    const qualified = qualifiedName(
+      { db: node.db, schema: node.schema, name: node.label },
+      activeDialect(),
+    );
     const sql = previewSelect(qualified, activeDialect(), PAGE_LIMIT);
     let newId = 0;
     setTabs((s) => {
