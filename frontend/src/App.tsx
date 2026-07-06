@@ -245,7 +245,13 @@ export function App() {
 
   // --- Command palette (issue #174) --------------------------------------
   const [paletteOpen, setPaletteOpen] = createSignal(false);
+  // "all" is the full palette (Mod+K); "objects" scopes it to the connection's
+  // tables/views (Mod+P), for a quick go-to-object jump.
+  const [paletteMode, setPaletteMode] = createSignal<"all" | "objects">("all");
   const [loadedObjects, setLoadedObjects] = createSignal<TreeNode[]>([]);
+
+  // Bumped by Ctrl/Cmd+F to open the SQL editor's find panel (see SqlEditor).
+  const [findTick, setFindTick] = createSignal(0);
 
   // --- Sidebar tools section collapse (issue #176) -----------------------
   const [toolsCollapsed, setToolsCollapsed] = createSignal(loadToolsCollapsed());
@@ -319,7 +325,17 @@ export function App() {
         showTool("help", "Atajos de teclado", { key: "help" });
         break;
       case "command-palette":
+        setPaletteMode("all");
         setPaletteOpen((v) => !v);
+        break;
+      case "object-palette":
+        // Always open scoped to objects (a "go to table/view" jump), never a
+        // toggle — pressing Ctrl+P should reliably land on the object search.
+        setPaletteMode("objects");
+        setPaletteOpen(true);
+        break;
+      case "editor-find":
+        setFindTick((t) => t + 1);
         break;
     }
   };
@@ -353,9 +369,13 @@ export function App() {
     const onKey = (e: KeyboardEvent) => {
       const action = matchShortcut(e);
       if (!action) return;
-      // While the command palette owns the screen, only its own toggle passes
-      // through — no global shortcut may mutate the app behind the overlay.
-      if (paletteOpen() && action !== "command-palette") return;
+      // While the command palette owns the screen, only the palette toggles act;
+      // other shortcuts are swallowed (preventDefault, no-op) so the webview host
+      // never runs its own find/print behind the overlay.
+      if (paletteOpen() && action !== "command-palette" && action !== "object-palette") {
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
       runShortcut(action);
     };
@@ -1184,6 +1204,14 @@ export function App() {
     return out;
   });
 
+  // What the palette shows depends on how it was opened: Mod+P scopes it to the
+  // connection's objects (a go-to-table/view jump), Mod+K shows everything.
+  const visiblePaletteCommands = createMemo<Command[]>(() =>
+    paletteMode() === "objects"
+      ? paletteCommands().filter((c) => c.category === "object")
+      : paletteCommands(),
+  );
+
   return (
     <div class="app">
       <div class="main">
@@ -1303,6 +1331,7 @@ export function App() {
                     onExplain={explainActive}
                     dialect={activeDialect()}
                     formatTick={formatTick()}
+                    searchTick={findTick()}
                     insertRequest={snippetInsert()}
                     schema={sqlSchema()}
                   />
@@ -1803,7 +1832,12 @@ export function App() {
 
       <CommandPalette
         open={paletteOpen()}
-        commands={paletteCommands()}
+        commands={visiblePaletteCommands()}
+        placeholder={
+          paletteMode() === "objects"
+            ? "Buscar tablas, vistas… (Enter para abrir)"
+            : undefined
+        }
         onClose={() => setPaletteOpen(false)}
       />
 
