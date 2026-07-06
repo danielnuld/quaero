@@ -5,6 +5,12 @@
 // and the MinGW windres toolchain regardless of the host codepage.
 #include <winver.h>
 
+// Application icon (issue #190). Resource id 1 = the lowest id, so Windows uses
+// it as the executable's default icon in Explorer, the taskbar and the webview
+// window. Path is injected by CMake (absolute, forward slashes) from
+// assets/icons/quaero.ico.
+1 ICON "@QUAERO_ICON_PATH@"
+
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
  PRODUCTVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0

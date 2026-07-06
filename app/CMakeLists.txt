@@ -31,6 +31,9 @@ target_link_libraries(quaero PRIVATE dbcore frontend_assets cjson webview::core)
 # hardcoded in the .rc. #190 will add the application icon to the same resource.
 if(WIN32)
   enable_language(RC)
+  # Absolute path with forward slashes for the ICON directive (accepted by both
+  # the MSVC rc compiler and MinGW windres).
+  set(QUAERO_ICON_PATH "${CMAKE_SOURCE_DIR}/assets/icons/quaero.ico")
   set(QUAERO_RC "${CMAKE_CURRENT_BINARY_DIR}/quaero.rc")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/quaero.rc.in" "${QUAERO_RC}" @ONLY)
   target_sources(quaero PRIVATE "${QUAERO_RC}")
