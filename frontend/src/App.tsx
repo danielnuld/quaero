@@ -36,7 +36,6 @@ import {
   type ThemePref,
 } from "./utils/theme";
 import { matchShortcut } from "./utils/shortcuts";
-import { loadCompletionSchema } from "./utils/completion";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import { clampSidebarWidth, SIDEBAR_DEFAULT } from "./utils/layout";
 import {
@@ -75,6 +74,7 @@ import { objectPreviewQuery } from "./utils/pagination";
 import { useDatabaseSql } from "./utils/dbContext";
 import {
   describePkColumns,
+  describeColumnNames,
   runPlanItem,
   txBegin,
   txCommit,
@@ -417,22 +417,26 @@ export function App() {
     document.title = conn?.name ? `Quaero — ${conn.name}` : "Quaero";
   });
 
-  // SQL autocomplete schema (issue #110): built in the background from the active
-  // connection's object tree, rebuilt on connection switch and on refresh (F5).
-  const [sqlSchema, setSqlSchema] = createSignal<Record<string, string[]>>({});
+  // SQL autocomplete schema (issue #110). Table/view NAMES come from the loaded
+  // object tree (no IPC), so name completion is instant. COLUMNS are cached
+  // lazily as tables are opened (openData describes the table anyway) — we do NOT
+  // eagerly describe dozens of tables at connect: on a single-connection engine
+  // like Informix that avalanche of schema.describe calls monopolized the
+  // connection and left the first table-open "loading" for seconds (issue: the
+  // sidebar open hangs). Columns fill in progressively as the user browses.
+  const [columnCache, setColumnCache] = createSignal<Record<string, string[]>>({});
   createEffect(() => {
-    const conn = active();
-    void treeReload(); // rebuild after a refresh too
-    if (!conn) {
-      setSqlSchema({});
-      return;
+    active();
+    void treeReload(); // a connection switch or refresh clears the cache
+    setColumnCache({});
+  });
+  const sqlSchema = createMemo<Record<string, string[]>>(() => {
+    const cache = columnCache();
+    const out: Record<string, string[]> = {};
+    for (const n of loadedObjects()) {
+      if (n.kind === "table" || n.kind === "view") out[n.label] = cache[n.label] ?? [];
     }
-    const connId = conn.connId;
-    void (async () => {
-      const schema = await loadCompletionSchema(connId);
-      // Ignore a late result if the connection changed meanwhile.
-      if (active()?.connId === connId) setSqlSchema(schema);
-    })();
+    return out;
   });
 
   const current = createMemo(() => activeTab(tabs()));
@@ -863,6 +867,8 @@ export function App() {
       // Fetch the table's primary key so the grid knows if it can be edited.
       try {
         const desc = await schemaDescribe(conn.connId, node.label, node.db, node.schema);
+        // Feed this table's columns into the autocomplete cache (lazy schema).
+        setColumnCache((c) => ({ ...c, [node.label]: describeColumnNames(desc) }));
         const source: EditSource = {
           table: node.label,
           db: node.db,
