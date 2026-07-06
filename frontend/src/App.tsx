@@ -71,6 +71,7 @@ import { loadSettings, saveSettings } from "./utils/settingsStore";
 import { pushRecent } from "./utils/recentTables";
 import type { Command } from "./utils/commandPalette";
 import { quoteIdentifier, schemaDescribe, schemaTree, parseTreeRows } from "./utils/schema";
+import { previewSelect } from "./utils/pagination";
 import { useDatabaseSql } from "./utils/dbContext";
 import {
   describePkColumns,
@@ -845,7 +846,9 @@ export function App() {
       .filter((p): p is string => !!p)
       .map((p) => quoteIdentifier(p, activeDialect()))
       .join(".");
-    const sql = `SELECT * FROM ${qualified} LIMIT ${PAGE_LIMIT};`;
+    // Cap the preview per the engine's dialect: Informix uses SELECT FIRST n,
+    // everyone else LIMIT n (see utils/pagination.ts).
+    const sql = previewSelect(qualified, activeDialect(), PAGE_LIMIT);
     let newId = 0;
     setTabs((s) => {
       const added = addTab(s);
