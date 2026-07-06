@@ -32,12 +32,11 @@
       <Directory Id="AppMenuDir" Name="Quaero" />
     </StandardDirectory>
 
-    <!-- App + its runtime DLLs. WebView2 is linked statically (no loader DLL).
-         The MySQL client is the 32-bit MariaDB Connector/C (libmariadb.dll,
-         auth plugins compiled in); the MinGW runtime uses the i686 dw2 libgcc. -->
+    <!-- App + its runtime DLLs. WebView2 is linked statically (no loader DLL);
+         the 32-bit MariaDB Connector/C is linked statically into mysql.dll (so
+         no libmariadb.dll here). The MinGW runtime uses the i686 dw2 libgcc. -->
     <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
       <File Id="quaero.exe" Source="build-x86/app/quaero.exe" />
-      <File Source="build-x86/app/libmariadb.dll" />
       <File Source="build-x86/app/libgcc_s_dw2-1.dll" />
       <File Source="build-x86/app/libstdc++-6.dll" />
       <File Source="build-x86/app/libwinpthread-1.dll" />

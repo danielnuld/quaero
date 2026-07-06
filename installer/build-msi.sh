@@ -9,16 +9,17 @@
 # Quaero loads drivers in-process, so the whole app must be x86 to support it.
 #
 # Staging: build-x86/app/ must contain the app + its runtime DLLs + drivers/.
-# Build it first with the i686 toolchain (see cmake/toolchain-i686-mingw.cmake
-# and the memory note quaero-x86-unified-build for the 32-bit MariaDB connector):
+# Build it first with the i686 toolchain (see cmake/toolchain-i686-mingw.cmake).
+# The MySQL client (32-bit MariaDB Connector/C), SSH (libssh2) and MongoDB
+# (mongo-c-driver) are all fetched and built from source by CMake — no manual
+# client library needed:
 #   pnpm --dir frontend build
 #   cmake -S . -B build-x86 -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-i686-mingw.cmake \
-#     -DQUAERO_SSH=ON -DQUAERO_MONGOC=ON \
-#     -DMYSQL_CLIENT_LIBRARY=C:/tools/mariadb32/mc-build/libmariadb/libmariadb.dll \
-#     -DMYSQL_INCLUDE_DIR=C:/tools/mariadb32/inc
+#     -DQUAERO_SSH=ON -DQUAERO_MARIADB=ON -DQUAERO_MONGOC=ON
 #   cmake --build build-x86 --target quaero
-# The CMake staging places the driver plugins, the MariaDB client and the MinGW
-# runtime DLLs next to quaero.exe automatically.
+# The CMake staging places the driver plugins and the MinGW runtime DLLs next to
+# quaero.exe automatically (the MariaDB client is linked statically into
+# mysql.dll, so there is no separate client DLL to ship).
 #
 # Usage: installer/build-msi.sh [version]   (default: contents of ./VERSION)
 set -eu
