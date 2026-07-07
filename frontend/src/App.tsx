@@ -111,9 +111,8 @@ import { BrandWordmark } from "./components/Brand";
 import { CommandPalette } from "./components/CommandPalette";
 import { SlowQueries } from "./components/SlowQueries";
 import { ExplainPlan } from "./components/ExplainPlan";
-import { SidebarTools } from "./components/SidebarTools";
-import { TOOL_CATALOG, loadToolsCollapsed, saveToolsCollapsed } from "./utils/toolCatalog";
-import { ConnectionManager } from "./components/ConnectionManager";
+import { TOOL_CATALOG } from "./utils/toolCatalog";
+import { ConnectionBar } from "./components/ConnectionBar";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { ObjectTree } from "./components/ObjectTree";
 import { StructureView } from "./components/StructureView";
@@ -254,13 +253,6 @@ export function App() {
   // Bumped by Ctrl/Cmd+F to open the SQL editor's find panel (see SqlEditor).
   const [findTick, setFindTick] = createSignal(0);
 
-  // --- Sidebar tools section collapse (issue #176) -----------------------
-  const [toolsCollapsed, setToolsCollapsed] = createSignal(loadToolsCollapsed());
-  const toggleToolsCollapsed = () => {
-    const next = !toolsCollapsed();
-    setToolsCollapsed(next);
-    saveToolsCollapsed(next);
-  };
 
   // --- User preferences (issue #181) -------------------------------------
   // Theme (above) and the history limit (below) keep their own stores; this
@@ -457,6 +449,16 @@ export function App() {
     title: string,
     opts?: Parameters<typeof openTool>[3],
   ) => setTabs((s) => openTool(s, tool, title, opts));
+  // The sidebar tools live behind a single 🧰 button in the object-tree header
+  // now (the always-open list was removed in the Explorer-first layout): open a
+  // context menu of the tool catalog, each launching its tool tab.
+  const openToolsMenu = (e: MouseEvent) => {
+    const items: MenuItem[] = TOOL_CATALOG.map((t) => ({
+      label: `${t.icon}  ${t.label}`,
+      action: () => showTool(t.tool, t.tabTitle, { key: t.key }),
+    }));
+    openContextMenu(e, items);
+  };
   const closeTool = (id: number) => setTabs((s) => closeTab(s, id));
   const closeToolByKind = (tool: ToolTab["tool"]) =>
     setTabs((s) => {
@@ -1226,22 +1228,19 @@ export function App() {
     <div class="app">
       <div class="main">
         <aside class="sidebar" style={{ width: `${sidebarWidth()}px` }}>
-          <div class="sidebar-header">Conexiones</div>
-          <div class="sidebar-body">
-            <ConnectionManager
-              connections={connections()}
-              activeConnId={activeDefId()}
-              connectingId={connectingId()}
-              onConnect={onConnect}
-              onEdit={onEditConnection}
-              onDelete={onDeleteConnection}
-              onNew={onNewConnection}
-              onDisconnect={() => void disconnect()}
-              onReconnect={reconnect}
-              onExport={exportConns}
-              onImport={importConns}
-            />
-          </div>
+          <ConnectionBar
+            connections={connections()}
+            activeConnId={activeDefId()}
+            connectingId={connectingId()}
+            onConnect={onConnect}
+            onEdit={onEditConnection}
+            onDelete={onDeleteConnection}
+            onNew={onNewConnection}
+            onDisconnect={() => void disconnect()}
+            onReconnect={reconnect}
+            onExport={exportConns}
+            onImport={importConns}
+          />
           <Show when={active()}>
             <Show when={databases().length > 0}>
               <div class="sidebar-db">
@@ -1257,11 +1256,6 @@ export function App() {
                 </label>
               </div>
             </Show>
-            <SidebarTools
-              collapsed={toolsCollapsed()}
-              onToggle={toggleToolsCollapsed}
-              onOpen={(t) => showTool(t.tool, t.tabTitle, { key: t.key })}
-            />
             <div class="sidebar-tree">
               <ObjectTree
                 connId={active()!.connId}
@@ -1271,6 +1265,7 @@ export function App() {
                 onOpenSql={openSqlInNewTab}
                 reloadKey={treeReload()}
                 onRefresh={refreshAll}
+                onOpenTools={openToolsMenu}
                 onObjectsLoaded={setLoadedObjects}
                 onSelectDatabase={syncWorkingDb}
                 onImport={(node) =>

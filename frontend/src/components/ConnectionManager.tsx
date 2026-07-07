@@ -1,11 +1,9 @@
 import { For, Show, createSignal } from "solid-js";
 import { driverSchema, engineIcon, type Connection } from "../utils/connections";
 
-// Sidebar list of saved connections with CRUD + connect actions. Clicking a
-// connection opens it; the active one is highlighted. Presentational — all
-// state and IPC live in App. Export/import (issue #188) let the user back up and
-// migrate connections; the export password opt-in is a deliberate, warned choice.
-export function ConnectionManager(props: {
+// Props for the connection list + CRUD. Shared with ConnectionBar, which wraps
+// this component in a collapsible sidebar popover (Explorer-first layout).
+export interface ConnectionManagerProps {
   connections: Connection[];
   activeConnId: string | null;
   /** Id of the connection currently being opened (shows a busy state). */
@@ -22,7 +20,13 @@ export function ConnectionManager(props: {
   onExport: (includePasswords: boolean) => void;
   /** Import connections from a file; resolves with a message to show the user. */
   onImport: (file: File) => Promise<string>;
-}) {
+}
+
+// Sidebar list of saved connections with CRUD + connect actions. Clicking a
+// connection opens it; the active one is highlighted. Presentational — all
+// state and IPC live in App. Export/import (issue #188) let the user back up and
+// migrate connections; the export password opt-in is a deliberate, warned choice.
+export function ConnectionManager(props: ConnectionManagerProps) {
   const [showExport, setShowExport] = createSignal(false);
   const [includePasswords, setIncludePasswords] = createSignal(false);
   const [importMsg, setImportMsg] = createSignal<string | null>(null);

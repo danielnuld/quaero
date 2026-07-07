@@ -174,6 +174,66 @@ body {
   line-height: 1.5;
 }
 
+/* Explorer-first connection bar: the active connection collapses to one row and
+   the full manager drops down as a popover, so the object tree owns the column. */
+.connbar {
+  position: relative;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.connbar-active {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.7rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.connbar-active:hover {
+  background: var(--bg-elev2);
+}
+.connbar-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.connbar-none {
+  flex: 1;
+  color: var(--text-dim);
+}
+.connbar-status {
+  font-size: 10px;
+  color: var(--number);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.connbar-caret {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.connbar-drop {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-top: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  max-height: 60vh;
+  overflow: auto;
+  padding: 0.6rem;
+}
+
 .resizer {
   width: 5px;
   cursor: col-resize;
@@ -1308,6 +1368,12 @@ kbd {
   font-size: 11px;
   letter-spacing: 0.04em;
   color: var(--text-dim);
+}
+
+.objtree-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
 }
 
 .objtree-refresh {
