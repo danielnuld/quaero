@@ -5,16 +5,19 @@ import { driverSchema, engineIcon, type Connection } from "../utils/connections"
 // this component in a collapsible sidebar popover (Explorer-first layout).
 export interface ConnectionManagerProps {
   connections: Connection[];
+  /** The focused connection's id (drives the tree + new tabs); highlighted. */
   activeConnId: string | null;
+  /** Ids of every open connection (several can be open at once). */
+  openIds?: string[];
   /** Id of the connection currently being opened (shows a busy state). */
   connectingId: string | null;
   onConnect: (c: Connection) => void;
   onEdit: (c: Connection) => void;
   onDelete: (id: string) => void;
   onNew: () => void;
-  /** Close the active connection. */
-  onDisconnect: () => void;
-  /** Reconnect the active connection with a fresh session (recovers a drop). */
+  /** Close an open connection (defaults to the focused one). */
+  onDisconnect: (defId?: string) => void;
+  /** Reconnect the focused connection with a fresh session (recovers a drop). */
   onReconnect: () => void;
   /** Export saved connections to a JSON file (issue #188). */
   onExport: (includePasswords: boolean) => void;
@@ -107,12 +110,14 @@ export function ConnectionManager(props: ConnectionManagerProps) {
           <For each={props.connections}>
             {(c) => (
               <li
-                class={`conn-item ${c.id === props.activeConnId ? "active" : ""}`}
+                class={`conn-item ${c.id === props.activeConnId ? "active" : ""} ${
+                  props.openIds?.includes(c.id) ? "open" : ""
+                }`}
                 style={c.color ? { "border-left": `3px solid ${c.color}` } : undefined}
               >
                 <button
                   class="conn-open"
-                  title="Conectar"
+                  title={props.openIds?.includes(c.id) ? "Enfocar" : "Conectar"}
                   disabled={props.connectingId !== null}
                   onClick={() => props.onConnect(c)}
                 >
@@ -121,6 +126,9 @@ export function ConnectionManager(props: ConnectionManagerProps) {
                       <span class="conn-color" style={{ background: c.color }} />
                     </Show>
                     <span class="engine-icon">{engineIcon(c.driver)}</span> {c.name}
+                    <Show when={props.openIds?.includes(c.id)}>
+                      <span class="conn-live" title="Conectada">●</span>
+                    </Show>
                   </span>
                   <span class="conn-driver">
                     {driverSchema(c.driver)?.label ?? c.driver}
@@ -136,7 +144,9 @@ export function ConnectionManager(props: ConnectionManagerProps) {
                     >
                       ↻
                     </button>
-                    <button title="Desconectar" onClick={() => props.onDisconnect()}>
+                  </Show>
+                  <Show when={props.openIds?.includes(c.id)}>
+                    <button title="Desconectar" onClick={() => props.onDisconnect(c.id)}>
                       ⏏
                     </button>
                   </Show>

@@ -24,6 +24,7 @@ import {
   type TabState,
   type QueryTab,
   type ToolTab,
+  type Tab,
 } from "./utils/tabs";
 import { openContextMenu, type MenuItem } from "./utils/contextMenu";
 import { type RunScope } from "./utils/runScope";
@@ -176,8 +177,14 @@ const emptyEdit = (): EditSessionState => ({
 // The live connection opened in the core: its core-side connId plus the saved
 // connection's display name.
 interface ActiveConnection {
+  /** The saved connection's id (stable across reconnects). */
+  defId: string;
+  /** The core session id (changes on reconnect). */
   connId: string;
   name: string;
+  driver: string;
+  /** Accent color carried from the saved connection, for the bar/tabs. */
+  color?: string;
 }
 
 // Sent explicitly rather than relying on the core's default so the page size is
@@ -218,8 +225,28 @@ export function App() {
   const [sidebarWidth, setSidebarWidth] = createSignal(SIDEBAR_DEFAULT);
 
   const [connections, setConnections] = createSignal<Connection[]>(loadConnections());
-  const [active, setActive] = createSignal<ActiveConnection | null>(null);
-  const [activeDefId, setActiveDefId] = createSignal<string | null>(null);
+  // Several connections can be open at once; `focusedDefId` names the one the
+  // object tree and newly-created query tabs bind to. `active`/`activeDefId` are
+  // derived views of the focused connection, so most of the app keeps referring
+  // to "the current connection" unchanged.
+  const [openConns, setOpenConns] = createSignal<ActiveConnection[]>([]);
+  const [focusedDefId, setFocusedDefId] = createSignal<string | null>(null);
+  const active = () => openConns().find((o) => o.defId === focusedDefId()) ?? null;
+  const activeDefId = focusedDefId;
+  const focusConn = (defId: string) => setFocusedDefId(defId);
+  // The connection a tab runs against: its bound one (if still open), else — for
+  // an unbound tab — the focused connection.
+  const tabConn = (tab: Tab | undefined): ActiveConnection | null => {
+    if (tab && tab.kind === "query" && tab.connDefId) {
+      return openConns().find((o) => o.defId === tab.connDefId) ?? null;
+    }
+    return active();
+  };
+  // The accent color of a query tab's bound connection, for the tab strip.
+  const tabColor = (tab: Tab): string | undefined =>
+    tab.kind === "query" && tab.connDefId
+      ? connections().find((c) => c.id === tab.connDefId)?.color
+      : undefined;
   // Working database context: the databases available on the active connection
   // and the one selected. Scopes the ER diagram / query builder and (on engines
   // that allow it) sets the editor's default database via USE.
@@ -295,7 +322,7 @@ export function App() {
   const runShortcut = (action: ReturnType<typeof matchShortcut>) => {
     switch (action) {
       case "new-tab":
-        setTabs((s) => addTab(s));
+        setTabs((s) => addTab(s, "Consulta", focusedDefId() ?? undefined));
         break;
       case "close-tab": {
         const t = current();
@@ -503,7 +530,7 @@ export function App() {
     return { idx, res };
   });
 
-  const newTab = () => setTabs((s) => addTab(s));
+  const newTab = () => setTabs((s) => addTab(s, "Consulta", focusedDefId() ?? undefined));
   const selectTab = (id: number) => setTabs((s) => ({ ...s, activeId: id }));
   const removeTab = (id: number, e: MouseEvent) => {
     e.stopPropagation();
@@ -518,7 +545,7 @@ export function App() {
   const runFromHistory = (sql: string) => {
     let newId = 0;
     setTabs((s) => {
-      const added = addTab(s);
+      const added = addTab(s, "Consulta", focusedDefId() ?? undefined);
       newId = added.activeId;
       return updateTabSql(added, newId, sql);
     });
@@ -530,7 +557,7 @@ export function App() {
   const openSqlInNewTab = (sql: string) => {
     let newId = 0;
     setTabs((s) => {
-      const added = addTab(s);
+      const added = addTab(s, "Consulta", focusedDefId() ?? undefined);
       newId = added.activeId;
       return updateTabSql(added, newId, sql);
     });
@@ -569,7 +596,7 @@ export function App() {
   const insertSnippet = (body: string) => {
     const id = lastQueryId();
     if (id !== null) setTabs((s) => ({ ...s, activeId: id }));
-    else setTabs((s) => addTab(s));
+    else setTabs((s) => addTab(s, "Consulta", focusedDefId() ?? undefined));
     setTimeout(() => setSnippetInsert((r) => ({ text: body, tick: r.tick + 1 })), 0);
   };
   const exportSnippets = () =>
@@ -621,8 +648,9 @@ export function App() {
 
   const onDeleteConnection = (id: string) => {
     persist(removeConnection(connections(), id));
-    if (activeDefId() === id) {
-      void disconnect();
+    // Close it if it happens to be open (focused or not).
+    if (openConns().some((o) => o.defId === id)) {
+      void disconnect(id);
     }
   };
 
@@ -631,36 +659,57 @@ export function App() {
     closeToolByKind("connectionForm");
   };
 
-  const disconnect = async () => {
-    const a = active();
-    if (a) {
-      try {
-        await closeConnection(a.connId);
-      } catch {
-        /* best-effort close */
-      }
+  // Close one open connection (the focused one when no id is given). Other open
+  // connections stay up; focus falls to another, or none.
+  const disconnect = async (defId?: string) => {
+    const target = defId ?? focusedDefId();
+    if (target == null) return;
+    const o = openConns().find((x) => x.defId === target);
+    if (!o) return;
+    try {
+      await closeConnection(o.connId);
+    } catch {
+      /* best-effort close */
     }
-    setActive(null);
-    setActiveDefId(null);
-    setDatabases([]);
-    setActiveDb(null);
+    const rest = openConns().filter((x) => x.defId !== target);
+    setOpenConns(rest);
+    if (focusedDefId() === target) {
+      setFocusedDefId(rest[0]?.defId ?? null);
+    }
+    if (rest.length === 0) {
+      setDatabases([]);
+      setActiveDb(null);
+    }
   };
 
   // --- End-to-end connect path (issue #17) -------------------------------
-  // `force` reconnects even when this connection is already the active one — used
-  // by "Reconectar" to recover a dropped/killed server session with a fresh
-  // connId. Without it, clicking the active connection is a no-op.
+  // Opening a connection ADDS it to the open set (others stay up) and focuses it;
+  // if it is already open, this just focuses it. `force` (Reconectar) drops the
+  // existing session and opens a fresh one to recover a dropped/killed server.
   const onConnect = async (c: Connection, force = false) => {
-    if (connectingId() !== null || (!force && active() && activeDefId() === c.id)) {
+    if (connectingId() !== null) return;
+    const existing = openConns().find((o) => o.defId === c.id);
+    if (existing && !force) {
+      setFocusedDefId(c.id); // already open — just bring it into focus
       return;
     }
     setConnectingId(c.id);
     try {
-      // Close any previously active connection before switching.
-      await disconnect();
+      if (existing) {
+        // Reconnect: drop the stale session before opening a fresh one.
+        try {
+          await closeConnection(existing.connId);
+        } catch {
+          /* best-effort */
+        }
+        setOpenConns((list) => list.filter((o) => o.defId !== c.id));
+      }
       const connId = await openConnection(c.driver, buildDsn(c));
-      setActive({ connId, name: c.name });
-      setActiveDefId(c.id);
+      setOpenConns((list) => [
+        ...list,
+        { defId: c.id, connId, name: c.name, driver: c.driver, color: c.color },
+      ]);
+      setFocusedDefId(c.id);
     } catch (err) {
       const tab = current();
       const f = describeError(err);
@@ -754,11 +803,17 @@ export function App() {
       setResults(id, { ...emptyResult(), error: "La consulta está vacía." });
       return;
     }
-    const conn = active();
+    // Run against the tab's OWN connection (bound at creation), so a prod tab and
+    // a dev tab keep hitting their own servers regardless of which is focused. A
+    // tab with no binding follows whatever is focused.
+    const conn = tabConn(tab);
     if (!conn) {
       setResults(id, {
         ...emptyResult(),
-        error: "No hay conexión activa. Abre una conexión para ejecutar consultas.",
+        error:
+          tab.kind === "query" && tab.connDefId
+            ? "La conexión de esta pestaña está cerrada. Vuelve a conectarla desde el panel de conexiones."
+            : "No hay conexión activa. Abre una conexión para ejecutar consultas.",
       });
       return;
     }
@@ -858,7 +913,7 @@ export function App() {
     );
     let newId = 0;
     setTabs((s) => {
-      const added = addTab(s);
+      const added = addTab(s, "Consulta", focusedDefId() ?? undefined);
       newId = added.activeId;
       return updateTabSql(added, newId, sql);
     });
@@ -922,7 +977,7 @@ export function App() {
 
   const beginEdit = async () => {
     const t = current();
-    const conn = active();
+    const conn = tabConn(t);
     if (!t || !conn || !currentEditable()) return;
     patchEdit(t.id, { busy: true, error: null });
     try {
@@ -940,7 +995,7 @@ export function App() {
 
   const discardEdit = async () => {
     const t = current();
-    const conn = active();
+    const conn = tabConn(t);
     if (!t || !conn) return;
     patchEdit(t.id, { busy: true });
     try {
@@ -956,7 +1011,7 @@ export function App() {
   // and show it for confirmation before anything is executed (issue #29).
   const confirmEdit = async () => {
     const t = current();
-    const conn = active();
+    const conn = tabConn(t);
     const res = currentResult();
     if (!t || !conn || !res.result || !res.source) return;
     const plan = buildPlan(res.source, res.result.columns, res.result.rows,
@@ -982,7 +1037,7 @@ export function App() {
   // Aplicar: execute the plan for real, then commit and reload.
   const applyEdit = async () => {
     const t = current();
-    const conn = active();
+    const conn = tabConn(t);
     const res = currentResult();
     if (!t || !conn || !res.result || !res.source) return;
     const plan = buildPlan(res.source, res.result.columns, res.result.rows,
@@ -1182,7 +1237,7 @@ export function App() {
     const connected = !!active();
 
     // Actions (always available).
-    out.push({ id: "act:new", category: "action", label: "Nueva consulta", run: () => setTabs((s) => addTab(s)) });
+    out.push({ id: "act:new", category: "action", label: "Nueva consulta", run: () => setTabs((s) => addTab(s, "Consulta", focusedDefId() ?? undefined)) });
     if (connected)
       out.push({ id: "act:reconnect", category: "action", label: "Reconectar", run: reconnect });
     out.push({ id: "act:settings", category: "action", label: "Ajustes", run: () => showTool("settings", "Ajustes", { key: "settings" }) });
@@ -1231,12 +1286,13 @@ export function App() {
           <ConnectionBar
             connections={connections()}
             activeConnId={activeDefId()}
+            openIds={openConns().map((o) => o.defId)}
             connectingId={connectingId()}
             onConnect={onConnect}
             onEdit={onEditConnection}
             onDelete={onDeleteConnection}
             onNew={onNewConnection}
-            onDisconnect={() => void disconnect()}
+            onDisconnect={(defId) => void disconnect(defId)}
             onReconnect={reconnect}
             onExport={exportConns}
             onImport={importConns}
@@ -1296,9 +1352,13 @@ export function App() {
                   class={`tab ${tab.id === tabs().activeId ? "active" : ""} ${
                     tab.kind === "tool" ? "tab-tool" : ""
                   }`}
+                  style={tabColor(tab) ? { "border-top": `2px solid ${tabColor(tab)}` } : undefined}
                   onClick={() => selectTab(tab.id)}
                   onContextMenu={(e) => tabMenu(e, tab.id)}
                 >
+                  <Show when={tabColor(tab)}>
+                    <span class="conn-color tab-conn-color" style={{ background: tabColor(tab) }} />
+                  </Show>
                   <span class="tab-title">{tab.title}</span>
                   <button
                     class="tab-close"

@@ -37,6 +37,10 @@ export interface QueryTab {
   title: string;
   /** Current SQL text in the editor. */
   sql: string;
+  /** The saved-connection id this tab runs against, bound at creation so the tab
+      keeps hitting its own connection even when another is focused. Undefined for
+      a tab created with no connection (it then follows whatever is focused). */
+  connDefId?: string;
 }
 
 /** A tool tab hosting a panel that used to be a modal. */
@@ -65,10 +69,11 @@ export function nextTabId(tabs: Tab[]): number {
   return tabs.reduce((max, t) => Math.max(max, t.id), 0) + 1;
 }
 
-/** Appends a fresh empty query tab and makes it active. */
-export function addTab(state: TabState, title = "Consulta"): TabState {
+/** Appends a fresh empty query tab and makes it active. Binds it to `connDefId`
+    (the connection focused at creation) so its queries stay on that connection. */
+export function addTab(state: TabState, title = "Consulta", connDefId?: string): TabState {
   const id = nextTabId(state.tabs);
-  const tab: QueryTab = { id, kind: "query", title: `${title} ${id}`, sql: "" };
+  const tab: QueryTab = { id, kind: "query", title: `${title} ${id}`, sql: "", connDefId };
   return { tabs: [...state.tabs, tab], activeId: id };
 }
 

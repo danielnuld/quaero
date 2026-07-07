@@ -234,6 +234,20 @@ body {
   padding: 0.6rem;
 }
 
+/* The connection-color dot shown on a query tab. */
+.tab-conn-color {
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+
+/* Marks an open (connected) connection in the list. */
+.conn-live {
+  color: var(--number);
+  font-size: 8px;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
 /* A connection's accent color: a dot in lists/bar, swatches in the form. */
 .conn-color {
   display: inline-block;
