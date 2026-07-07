@@ -47,12 +47,18 @@ export function ConnectionBar(props: ConnectionManagerProps) {
         class="connbar-active"
         aria-expanded={open()}
         title="Conexiones"
+        style={
+          active()?.color ? { "border-left": `4px solid ${active()!.color}` } : undefined
+        }
         onClick={() => setOpen((v) => !v)}
       >
         <Show
           when={active()}
           fallback={<span class="connbar-none">Elegir conexión</span>}
         >
+          <Show when={active()!.color}>
+            <span class="conn-color" style={{ background: active()!.color }} />
+          </Show>
           <span class="engine-icon">{engineIcon(active()!.driver)}</span>
           <span class="connbar-name">{active()!.name}</span>
           <span class="connbar-status">conectado</span>

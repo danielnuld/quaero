@@ -106,7 +106,10 @@ export function ConnectionManager(props: ConnectionManagerProps) {
         <ul class="conn-list">
           <For each={props.connections}>
             {(c) => (
-              <li class={`conn-item ${c.id === props.activeConnId ? "active" : ""}`}>
+              <li
+                class={`conn-item ${c.id === props.activeConnId ? "active" : ""}`}
+                style={c.color ? { "border-left": `3px solid ${c.color}` } : undefined}
+              >
                 <button
                   class="conn-open"
                   title="Conectar"
@@ -114,6 +117,9 @@ export function ConnectionManager(props: ConnectionManagerProps) {
                   onClick={() => props.onConnect(c)}
                 >
                   <span class="conn-name">
+                    <Show when={c.color}>
+                      <span class="conn-color" style={{ background: c.color }} />
+                    </Show>
                     <span class="engine-icon">{engineIcon(c.driver)}</span> {c.name}
                   </span>
                   <span class="conn-driver">
