@@ -240,6 +240,13 @@ body {
   vertical-align: middle;
 }
 
+/* Full-width strip at the top of the workspace in the active tab's connection
+   color — the strong "which server am I on" cue (prod red, dev green). */
+.workspace-accent {
+  height: 4px;
+  flex: none;
+}
+
 /* Marks an open (connected) connection in the list. */
 .conn-live {
   color: var(--number);

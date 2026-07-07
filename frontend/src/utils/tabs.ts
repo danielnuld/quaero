@@ -55,6 +55,9 @@ export interface ToolTab {
   params?: unknown;
   /** The query tab this tool acts on, when it reloads/reads that result. */
   sourceId?: number;
+  /** The connection this tool acts on, bound at creation so it does not drift
+      when another connection is focused (mirrors QueryTab.connDefId). */
+  connDefId?: string;
 }
 
 export type Tab = QueryTab | ToolTab;
@@ -85,7 +88,7 @@ export function openTool(
   state: TabState,
   tool: ToolKind,
   title: string,
-  opts: { key?: string; params?: unknown; sourceId?: number } = {},
+  opts: { key?: string; params?: unknown; sourceId?: number; connDefId?: string } = {},
 ): TabState {
   const existing = state.tabs.find(
     (t): t is ToolTab =>

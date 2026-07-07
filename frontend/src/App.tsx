@@ -237,7 +237,7 @@ export function App() {
   // The connection a tab runs against: its bound one (if still open), else — for
   // an unbound tab — the focused connection.
   const tabConn = (tab: Tab | undefined): ActiveConnection | null => {
-    if (tab && tab.kind === "query" && tab.connDefId) {
+    if (tab && tab.connDefId) {
       return openConns().find((o) => o.defId === tab.connDefId) ?? null;
     }
     return active();
@@ -470,12 +470,20 @@ export function App() {
     const t = current();
     return t && t.kind === "tool" ? t : undefined;
   });
-  // Open (or focus) a tool tab, and close one by id.
+  // The connection a tool panel acts on: the tool tab's bound one, else focused.
+  const toolConn = () => tabConn(currentTool());
+  // Open (or focus) a tool tab, and close one by id. Bind the tab to the focused
+  // connection at creation so the panel stays on that connection even if another
+  // is focused later; an explicit opts.connDefId (e.g. EXPLAIN from a bound query
+  // tab) overrides it.
   const showTool = (
     tool: Parameters<typeof openTool>[1],
     title: string,
     opts?: Parameters<typeof openTool>[3],
-  ) => setTabs((s) => openTool(s, tool, title, opts));
+  ) =>
+    setTabs((s) =>
+      openTool(s, tool, title, { connDefId: focusedDefId() ?? undefined, ...opts }),
+    );
   // The sidebar tools live behind a single 🧰 button in the object-tree header
   // now (the always-open list was removed in the Explorer-first layout): open a
   // context menu of the tool catalog, each launching its tool tab.
@@ -875,13 +883,20 @@ export function App() {
   // Open the visual execution plan (issue #187) for a statement as a tool tab.
   // The ExplainPlan component runs the structured EXPLAIN and renders the tree;
   // it handles unsupported engines / no connection honestly on its own.
-  const showExplainPlan = (rawSql: string) => {
+  const showExplainPlan = (rawSql: string, connDefId?: string) => {
     const sql = rawSql.trim();
     if (!sql) return;
-    showTool("explainPlan", "Plan de ejecución", { key: `plan:${sql}`, params: { sql } });
+    // Bind the plan to the originating tab's connection so it explains against
+    // the right server; without one it falls back to the focused connection.
+    showTool("explainPlan", "Plan de ejecución", {
+      key: `plan:${sql}`,
+      params: { sql },
+      ...(connDefId ? { connDefId } : {}),
+    });
   };
 
-  // The editor's "Plan" button: visual plan for the active tab's SQL.
+  // The editor's "Plan" button: visual plan for the active tab's SQL, against
+  // that tab's own connection.
   const explainActive = () => {
     const tab = current();
     if (!tab) return;
@@ -890,7 +905,7 @@ export function App() {
       setResults(tab.id, { ...emptyResult(), error: "La consulta está vacía." });
       return;
     }
-    showExplainPlan(sql);
+    showExplainPlan(sql, tab.kind === "query" ? tab.connDefId : undefined);
   };
 
   // EXPLAIN an arbitrary statement (e.g. a slow query, issue #180) as a visual plan.
@@ -1345,6 +1360,13 @@ export function App() {
         <div class="resizer" onMouseDown={startResize} />
 
         <section class="workspace">
+          <Show when={tabConn(current())?.color}>
+            <div
+              class="workspace-accent"
+              style={{ background: tabConn(current())!.color }}
+              title="Conexión de la pestaña activa"
+            />
+          </Show>
           <div class="tabbar">
             <For each={tabs().tabs}>
               {(tab) => (
@@ -1656,21 +1678,21 @@ export function App() {
               <Switch>
                 <Match when={tt().tool === "monitor"}>
                   <ServerMonitor
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     engine={activeDialect()}
                     onClose={() => closeTool(tt().id)}
                   />
                 </Match>
                 <Match when={tt().tool === "users"}>
                   <UserManager
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     engine={activeDialect()}
                     onClose={() => closeTool(tt().id)}
                   />
                 </Match>
                 <Match when={tt().tool === "generator"}>
                   <DataGenerator
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     target={(tt().params as { target: EditTarget }).target}
                     onClose={() => closeTool(tt().id)}
                     onGenerated={() => {
@@ -1681,7 +1703,7 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "import"}>
                   <ImportWizard
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     target={(tt().params as { target: EditTarget }).target}
                     onClose={() => closeTool(tt().id)}
                     onImported={() => {
@@ -1692,7 +1714,7 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "tableDesigner"}>
                   <TableDesigner
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     engine={activeDialect()}
                     table={(tt().params as { table?: string }).table}
                     container={(tt().params as { container?: string }).container}
@@ -1704,7 +1726,7 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "indexes"}>
                   <IndexManager
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     engine={activeDialect()}
                     table={(tt().params as { table: string }).table}
                     db={(tt().params as { db?: string }).db}
@@ -1715,7 +1737,7 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "structure"}>
                   <StructureView
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     table={(tt().params as { node: TreeNode }).node.label}
                     db={(tt().params as { node: TreeNode }).node.db}
                     schema={(tt().params as { node: TreeNode }).node.schema}
@@ -1727,7 +1749,7 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "schemaSync"}>
                   <SchemaSyncWizard
-                    sourceConnId={active()?.connId ?? ""}
+                    sourceConnId={toolConn()?.connId ?? ""}
                     sourceDb={(tt().params as { sourceDb?: string }).sourceDb}
                     connections={connections()}
                     onClose={() => closeTool(tt().id)}
@@ -1788,14 +1810,14 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "erDiagram"}>
                   <ErDiagram
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     db={activeDb() ?? undefined}
                     onClose={() => closeTool(tt().id)}
                   />
                 </Match>
                 <Match when={tt().tool === "queryBuilder"}>
                   <QueryBuilder
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     engine={activeDialect()}
                     db={activeDb() ?? undefined}
                     onRun={(sql) => {
@@ -1807,7 +1829,7 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "routines"}>
                   <RoutineExplorer
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     engine={activeDialect()}
                     db={activeDb() ?? undefined}
                     onOpenSql={(sql) => {
@@ -1819,7 +1841,7 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "triggers"}>
                   <TriggersExplorer
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     engine={activeDialect()}
                     db={activeDb() ?? undefined}
                     onOpenSql={(sql) => {
@@ -1831,7 +1853,7 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "explainPlan"}>
                   <ExplainPlan
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     engine={activeDialect()}
                     sql={(tt().params as { sql: string }).sql}
                     onClose={() => closeTool(tt().id)}
@@ -1839,7 +1861,7 @@ export function App() {
                 </Match>
                 <Match when={tt().tool === "slowQueries"}>
                   <SlowQueries
-                    connId={active()?.connId ?? ""}
+                    connId={toolConn()?.connId ?? ""}
                     engine={activeDialect()}
                     onOpenSql={(sql) => {
                       closeTool(tt().id);
