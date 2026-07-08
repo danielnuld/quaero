@@ -69,6 +69,25 @@
   --chart-8: #eb6834;
 }
 
+/* Navicat skin (design proposal): a professional blue accent, chosen separately
+   from light/dark and layered over either theme. Only the accent tokens change
+   — the per-object-type --obj-* colours already carry the Navicat feel. Placed
+   AFTER the theme blocks so it overrides them; the light+skin combo uses a
+   higher-specificity selector to win over the dark defaults. Contrasts hold AA
+   (issue #220 discipline): white on #2f6fed = 4.55; dark ink on #5b9bff = 6.9. */
+:root[data-skin="navicat"] {
+  --accent: #5b9bff;
+  --accent-fg: #0c1015;
+  --accent-hover: #7db0ff;
+  --accent-text: #7fb2ff;
+}
+:root[data-theme="light"][data-skin="navicat"] {
+  --accent: #2f6fed;
+  --accent-fg: #ffffff;
+  --accent-hover: #245fd0;
+  --accent-text: #2861d6;
+}
+
 :root {
   /* Semantic aliases used across newer components; kept in sync with the
      palette above so both themes drive them. */
