@@ -77,6 +77,21 @@
   --bg-alt: var(--bg-elev);
   --font-ui: system-ui, "Segoe UI", sans-serif;
   --font-mono: "Cascadia Code", "Consolas", ui-monospace, monospace;
+
+  /* Per-object-type identity colours (Navicat-parity design).
+     Distinct, vivid hues — the single strongest "this is a database tool"
+     recognition signal. Shared across the tree, object lists and tabs. Dark
+     ink sits on them (they are self-contained chips), so one set works in both
+     themes. --obj-*-ink is the text/glyph colour drawn ON that colour. */
+  --obj-database: #58c2c9;
+  --obj-schema: #8fb4e6;
+  --obj-table: #4d90fe;
+  --obj-view: #35c15a;
+  --obj-function: #b98cf2;
+  --obj-procedure: #f0a63f;
+  --obj-trigger: #f2726d;
+  --obj-event: #45c8d6;
+  --obj-ink: #16181d;
 }
 
 * {
@@ -1621,17 +1636,21 @@ kbd {
   padding: 1px 4px;
   border-radius: 3px;
   flex-shrink: 0;
-  color: #1a1a20;
+  color: var(--obj-ink);
 }
 
-.objtree-badge.kind-database { background: #c0a0e0; }
-.objtree-badge.kind-schema { background: #8fb8e0; }
-.objtree-badge.kind-table { background: var(--number); }
-.objtree-badge.kind-view { background: #e0c890; }
+/* Per-type identity colours (Navicat-parity design). One vivid hue per kind so
+   the object type reads at a glance in the tree, object lists and tabs. */
+.objtree-badge.kind-database { background: var(--obj-database); }
+.objtree-badge.kind-schema { background: var(--obj-schema); }
+.objtree-badge.kind-table { background: var(--obj-table); }
+.objtree-badge.kind-view { background: var(--obj-view); }
 /* Routine/trigger/event leaves (listed on demand, #135 phase 2). */
-.objtree-badge.kind-routine { background: #a0d0b0; }
-.objtree-badge.kind-trigger { background: #e0a890; }
-.objtree-badge.kind-event { background: #90c8d0; }
+.objtree-badge.kind-routine,
+.objtree-badge.kind-procedure { background: var(--obj-procedure); }
+.objtree-badge.kind-function { background: var(--obj-function); }
+.objtree-badge.kind-trigger { background: var(--obj-trigger); }
+.objtree-badge.kind-event { background: var(--obj-event); }
 .objtree-badge.kind-unknown { background: var(--text-dim); }
 /* Type folder (Tablas/Vistas): a neutral count chip. */
 .objtree-badge.kind-group {
