@@ -169,6 +169,10 @@ interface TabResult {
   pageSql?: string;
   offset?: number;
   pageSize?: number;
+  /** Set when this result is an "open table" preview: paging regenerates the
+      preview SQL with a server-side LIMIT/OFFSET (the baked cap otherwise makes
+      the core's row-skip pagination return an empty page 2). */
+  preview?: { parts: { db?: string; schema?: string; name: string }; engine: string };
 }
 
 // Per-tab edit-session state (M7). Present only while editing a tab.
@@ -202,10 +206,10 @@ interface ActiveConnection {
   color?: string;
 }
 
-// Sent explicitly rather than relying on the core's default so the page size is
-// owned by the UI. True page-by-page fetching (offset/cursor) needs protocol
-// support and lands later; for now the grid virtualizes the returned page and
-// surfaces `truncated` honestly.
+// Page size, owned by the UI (sent explicitly, not the core default). Table
+// previews fetch page-by-page with a server-side LIMIT/OFFSET (runPreviewPage);
+// a plain query pages via the core's row-skip offset. `truncated` marks a
+// further page; the grid virtualizes the returned page.
 const PAGE_LIMIT = 1000;
 
 const emptyResult = (): TabResult => ({
@@ -900,18 +904,75 @@ export function App() {
     }
   };
 
+  // Run one page of an "open table" preview. The offset is pushed INTO the SQL
+  // (server-side LIMIT/OFFSET) so the core-side offset stays 0 — a preview caps
+  // its own row count, which the core's row-skip pagination cannot page past. The
+  // editor shows the clean `LIMIT PAGE_LIMIT OFFSET m` SQL; execution fetches one
+  // extra row so the core marks the page truncated when a further page exists.
+  const runPreviewPage = async (
+    preview: { parts: { db?: string; schema?: string; name: string }; engine: string },
+    offset: number,
+  ) => {
+    const tab = current();
+    if (!tab) return;
+    const id = tab.id;
+    const conn = tabConn(tab);
+    if (!conn) {
+      setResults(id, {
+        ...emptyResult(),
+        error: "No hay conexión activa. Abre una conexión para ejecutar consultas.",
+      });
+      return;
+    }
+    const displaySql = objectPreviewQuery(preview.parts, preview.engine, PAGE_LIMIT, offset);
+    const fetchSql = objectPreviewQuery(preview.parts, preview.engine, PAGE_LIMIT + 1, offset);
+    // Keep the edit source across page turns of the same table so the grid stays editable.
+    const keepSource = results[id]?.source ?? undefined;
+    setResults(id, { ...emptyResult(), loading: true, ranScope: "document", source: keepSource, preview });
+    setTabs((s) => updateTabSql(s, id, displaySql));
+    const started = performance.now();
+    try {
+      const result = await runQuery(conn.connId, fetchSql, PAGE_LIMIT, 0);
+      setResults(id, {
+        loading: false,
+        error: null,
+        result,
+        elapsedMs: performance.now() - started,
+        ranScope: "document",
+        pageSql: displaySql,
+        offset,
+        pageSize: PAGE_LIMIT,
+        source: keepSource,
+        preview,
+      });
+    } catch (err) {
+      setResults(id, {
+        loading: false,
+        error: errorText(err),
+        result: null,
+        elapsedMs: performance.now() - started,
+        ranScope: "document",
+      });
+    }
+  };
+
   // Offset pagination (issue #134): re-run the current result's SQL at the
   // previous / next page. Guarded while editing so a page turn never discards
-  // pending changes.
+  // pending changes. Table previews regenerate their paged SQL (server-side
+  // offset); a plain query re-runs at a new core-side offset.
   const pageBy = (delta: 1 | -1) => {
     const t = current();
     if (!t) return;
     const r = results[t.id];
-    if (!r || !r.pageSql || r.loading || currentEdit().editing) return;
+    if (!r || r.loading || currentEdit().editing) return;
     const size = r.pageSize ?? PAGE_LIMIT;
     const nextOffset = Math.max(0, (r.offset ?? 0) + delta * size);
     if (nextOffset === (r.offset ?? 0)) return;
-    void run(r.pageSql, r.ranScope ?? "document", nextOffset);
+    if (r.preview) {
+      void runPreviewPage(r.preview, nextOffset);
+    } else if (r.pageSql) {
+      void run(r.pageSql, r.ranScope ?? "document", nextOffset);
+    }
   };
 
   // Show the execution plan of the active query (issue #131): build the EXPLAIN
@@ -956,14 +1017,15 @@ export function App() {
   const openData = (node: TreeNode) => {
     recordRecent(node);
     syncWorkingDb(node.db);
-    // The capped preview query in the engine's own surface: a qualified SELECT
-    // for relational engines (Informix uses db:owner.table + FIRST), or
-    // db.<collection>.find().limit() for MongoDB (see objectPreviewQuery).
-    const sql = objectPreviewQuery(
-      { db: node.db, schema: node.schema, name: node.label },
-      activeDialect(),
-      PAGE_LIMIT,
-    );
+    // A paged "open table" preview (issue #134): a qualified SELECT for relational
+    // engines (Informix uses db:owner.table + SKIP/FIRST), or db.<collection>.find()
+    // for MongoDB. Paging regenerates this with a server-side offset — see
+    // runPreviewPage / objectPreviewQuery.
+    const preview = {
+      parts: { db: node.db, schema: node.schema, name: node.label },
+      engine: activeDialect(),
+    };
+    const sql = objectPreviewQuery(preview.parts, preview.engine, PAGE_LIMIT);
     let newId = 0;
     setTabs((s) => {
       const added = addTab(s, "Consulta", focusedDefId() ?? undefined);
@@ -971,7 +1033,7 @@ export function App() {
       return updateTabSql(added, newId, sql);
     });
     void (async () => {
-      await run(sql);
+      await runPreviewPage(preview, 0);
       const conn = active();
       if (!conn) return;
       // Fetch the table's primary key so the grid knows if it can be edited.
@@ -1042,6 +1104,14 @@ export function App() {
   };
 
   const reloadCurrent = (id: number) => {
+    // A table preview reloads its current page through the preview path so the
+    // descriptor + server-side offset survive (re-running the paged SQL as a
+    // plain query would double-apply the baked OFFSET and lose paging).
+    const r = results[id];
+    if (r?.preview) {
+      void runPreviewPage(r.preview, r.offset ?? 0);
+      return;
+    }
     const sql = tabs().tabs.find((x) => x.id === id)?.sql;
     if (sql) void run(sql);
   };
