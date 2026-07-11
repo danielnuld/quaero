@@ -93,6 +93,26 @@ export const es: Record<string, string> = {
   "empty.shortcuts": "Atajos",
   "empty.hint": "Abre una tabla del árbol o escribe SQL y pulsa {keys}.",
 
+  // tool panels — shared chrome (also defined in the ServerMonitor/SlowQueries PR;
+  // identical values — on merge keep a single copy of this block)
+  "panel.refresh": "⟳ Refrescar",
+  "panel.refreshing": "Actualizando…",
+  "panel.close": "Cerrar",
+  "panel.loading": "Cargando…",
+
+  // routine / trigger explorers (RoutineExplorer.tsx + TriggersExplorer.tsx)
+  "explorer.objects": "{n} objeto(s)",
+  "explorer.selectHint": "Selecciona un objeto para ver su definición.",
+  "explorer.openInEditor": "Abrir en editor",
+  "explorer.openInEditorTitle": "Abrir la definición en una nueva consulta",
+  "explorer.loadingDef": "Cargando definición…",
+  "explorer.noDef": "Sin definición disponible.",
+  "explorer.noRoutines": "No hay procedimientos ni funciones.",
+  "explorer.triggersTab": "Triggers",
+  "explorer.eventsTab": "Eventos",
+  "explorer.noTriggers": "No hay triggers.",
+  "explorer.noEvents": "No hay eventos programados.",
+
   // errors
   "error.noActiveConn": "No hay conexión activa. Abre una conexión para ejecutar consultas.",
 

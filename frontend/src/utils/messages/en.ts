@@ -90,6 +90,26 @@ export const en: Record<string, string> = {
   "empty.shortcuts": "Shortcuts",
   "empty.hint": "Open a table from the tree or write SQL and press {keys}.",
 
+  // tool panels — shared chrome (also defined in the ServerMonitor/SlowQueries PR;
+  // identical values — on merge keep a single copy of this block)
+  "panel.refresh": "⟳ Refresh",
+  "panel.refreshing": "Refreshing…",
+  "panel.close": "Close",
+  "panel.loading": "Loading…",
+
+  // routine / trigger explorers (RoutineExplorer.tsx + TriggersExplorer.tsx)
+  "explorer.objects": "{n} object(s)",
+  "explorer.selectHint": "Select an object to view its definition.",
+  "explorer.openInEditor": "Open in editor",
+  "explorer.openInEditorTitle": "Open the definition in a new query",
+  "explorer.loadingDef": "Loading definition…",
+  "explorer.noDef": "No definition available.",
+  "explorer.noRoutines": "No procedures or functions.",
+  "explorer.triggersTab": "Triggers",
+  "explorer.eventsTab": "Events",
+  "explorer.noTriggers": "No triggers.",
+  "explorer.noEvents": "No scheduled events.",
+
   // errors
   "error.noActiveConn": "No active connection. Open a connection to run queries.",
 
