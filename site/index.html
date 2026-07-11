@@ -140,7 +140,7 @@
   .feature p { margin: 0; color: var(--muted); font-size: 14.5px; }
 
   .showcase { margin: 0 0 30px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: 0 16px 44px color-mix(in srgb, var(--ink) 12%, transparent); }
-  .showcase img { display: block; width: 100%; height: auto; }
+  .showcase img, .showcase video { display: block; width: 100%; height: auto; }
   .showcase figcaption { font-size: 12.5px; color: var(--faint); padding: 8px 14px; background: var(--panel); border-top: 1px solid var(--line); }
 
   .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin-top: 30px; }
@@ -225,6 +225,17 @@
     <h2>Todo lo que esperas de un gestor de bases</h2>
     <p class="intro">Cada característica descrita aquí es algo que Quaero hace hoy —
       explorador de objetos, editor SQL y rejilla de resultados, en un solo lugar.</p>
+
+    <figure class="showcase">
+      <video autoplay muted loop playsinline preload="metadata"
+             poster="video/quaero-demo-poster.png"
+             width="1360" height="860" aria-label="Demo: conectar, explorar el árbol de objetos, consultar y ver el diagrama ER">
+        <source src="video/quaero-demo.webm" type="video/webm">
+        <source src="video/quaero-demo.mp4" type="video/mp4">
+        <img src="video/quaero-demo-poster.png" alt="Quaero: consulta con resultados en la rejilla" width="1360" height="860">
+      </video>
+      <figcaption>Del árbol a la consulta en segundos — datos de demostración.</figcaption>
+    </figure>
 
     <figure class="showcase">
       <picture>
