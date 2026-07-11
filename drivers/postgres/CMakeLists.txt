@@ -32,7 +32,44 @@ if(BUILD_TESTING)
   add_test(NAME postgres_dml_test COMMAND postgres_dml_test)
 endif()
 
-# --- driver plugin (only when libpq is available) -------------------------
+# --- driver plugin --------------------------------------------------------
+# Sources are the same regardless of how libpq is provided.
+set(POSTGRES_DRIVER_SRC
+  src/entry.c
+  src/connection.c
+  src/query.c
+  src/metadata.c
+  src/ddl.c
+  src/edit.c
+  src/utils/types.c
+  src/utils/identifier.c
+  src/utils/dml.c)
+
+# Common target setup shared by both the system-libpq and from-source paths.
+# cjson supplies cJSON.h (used for DSN parsing); linking it propagates its
+# include dir, exactly as the SQLite/MySQL drivers do.
+macro(_quaero_postgres_common)
+  target_include_directories(postgres_driver PRIVATE
+    src ${CMAKE_SOURCE_DIR}/core/include)
+  target_link_libraries(postgres_driver PRIVATE cjson)
+  set_target_properties(postgres_driver PROPERTIES PREFIX "" OUTPUT_NAME "postgres")
+  quaero_set_warnings(postgres_driver)
+endmacro()
+
+# Build libpq from source when asked (no usable system client — notably the x86
+# Windows release; see cmake/QuaeroLibpq.cmake). Otherwise discover a system
+# libpq and use it only if it links for this target.
+option(QUAERO_LIBPQ "Fetch + build a static libpq from source for the PostgreSQL plugin" OFF)
+
+if(QUAERO_LIBPQ)
+  add_library(postgres_driver MODULE ${POSTGRES_DRIVER_SRC})
+  _quaero_postgres_common()
+  include(QuaeroLibpq)
+  quaero_enable_libpq(postgres_driver)
+  message(STATUS "PostgreSQL driver: building static libpq from source (QUAERO_LIBPQ=ON)")
+  return()
+endif()
+
 # Discover libpq. pg_config, when present, points at the active PostgreSQL
 # install (including the one Strawberry Perl bundles on Windows); use it as a
 # hint, then fall back to CMake's default search paths.
@@ -85,28 +122,12 @@ if(PG_INCLUDE_DIR AND PG_LIBRARY)
 endif()
 
 if(PG_INCLUDE_DIR AND PG_LIBRARY AND PG_LIBPQ_LINKS)
-  add_library(postgres_driver MODULE
-    src/entry.c
-    src/connection.c
-    src/query.c
-    src/metadata.c
-    src/ddl.c
-    src/edit.c
-    src/utils/types.c
-    src/utils/identifier.c
-    src/utils/dml.c)
-  target_include_directories(postgres_driver PRIVATE
-    src ${CMAKE_SOURCE_DIR}/core/include)
-  # cjson supplies cJSON.h (used for DSN parsing); linking it propagates its
-  # include dir, exactly as the SQLite/MySQL drivers do.
-  target_link_libraries(postgres_driver PRIVATE cjson)
+  add_library(postgres_driver MODULE ${POSTGRES_DRIVER_SRC})
+  _quaero_postgres_common()
   # libpq headers are third-party: include them as SYSTEM so they are not subject
   # to the strict -Werror policy applied to our own code.
   target_include_directories(postgres_driver SYSTEM PRIVATE ${PG_INCLUDE_DIR})
   target_link_libraries(postgres_driver PRIVATE ${_pg_link_libs})
-
-  set_target_properties(postgres_driver PROPERTIES PREFIX "" OUTPUT_NAME "postgres")
-  quaero_set_warnings(postgres_driver)
   message(STATUS "PostgreSQL driver: using ${PG_LIBRARY} (headers ${PG_INCLUDE_DIR})")
 elseif(PG_INCLUDE_DIR AND PG_LIBRARY)
   message(STATUS "PostgreSQL driver: libpq at ${PG_LIBRARY} does not link for this "

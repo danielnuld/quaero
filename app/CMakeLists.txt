@@ -137,8 +137,11 @@ if(TARGET postgres_driver)
   # CMakeLists, so they are visible here. A ".a" is a static archive (self
   # contained); anything else on Windows (".dll.a", ".lib") is a shared import
   # lib whose runtime DLLs must be staged.
+  # QUAERO_LIBPQ links libpq statically into the plugin (no runtime DLL). Only a
+  # discovered *shared* system libpq (PG_LIBRARY set, not a .a archive) needs its
+  # DLLs staged.
   get_filename_component(_pg_lib_ext "${PG_LIBRARY}" EXT)
-  if(WIN32 AND NOT _pg_lib_ext STREQUAL ".a")
+  if(WIN32 AND PG_LIBRARY AND NOT QUAERO_LIBPQ AND NOT _pg_lib_ext STREQUAL ".a")
     set(_pg_bindir "")
     if(PG_CONFIG)
       execute_process(COMMAND ${PG_CONFIG} --bindir
