@@ -49,7 +49,42 @@ find_path(PG_INCLUDE_DIR NAMES libpq-fe.h
 find_library(PG_LIBRARY NAMES pq libpq
   HINTS ${_pg_libdir})
 
+# Assemble the full link line for libpq. A static libpq (.a) needs its transitive
+# dependencies spelled out: OpenSSL (TLS transport) plus, on Windows, the
+# socket/security/LDAP system libraries libpq calls into. A shared libpq resolves
+# these itself, so nothing extra is added.
+set(_pg_link_libs "")
 if(PG_INCLUDE_DIR AND PG_LIBRARY)
+  set(_pg_link_libs ${PG_LIBRARY})
+  get_filename_component(_pg_lib_ext "${PG_LIBRARY}" EXT)
+  if(_pg_lib_ext STREQUAL ".a")
+    find_library(PG_SSL_LIBRARY NAMES ssl libssl HINTS ${_pg_libdir})
+    find_library(PG_CRYPTO_LIBRARY NAMES crypto libcrypto HINTS ${_pg_libdir})
+    if(PG_SSL_LIBRARY AND PG_CRYPTO_LIBRARY)
+      list(APPEND _pg_link_libs ${PG_SSL_LIBRARY} ${PG_CRYPTO_LIBRARY})
+    endif()
+    if(WIN32)
+      list(APPEND _pg_link_libs ws2_32 secur32 crypt32 wldap32 gdi32 advapi32)
+    endif()
+  endif()
+
+  # Verify the discovered libpq actually links for THIS target before committing
+  # to the plugin. find_library does not check architecture, so a libpq of the
+  # wrong bitness (e.g. a 64-bit Strawberry Perl libpq on PATH during the 32-bit
+  # x86 build) is returned happily and only fails at link time with undefined PQ*
+  # references. A tiny link probe turns that into a clean skip, matching how the
+  # informix/mongodb plugins drop out when their client lib is unusable.
+  include(CheckCSourceCompiles)
+  set(CMAKE_REQUIRED_INCLUDES ${PG_INCLUDE_DIR})
+  set(CMAKE_REQUIRED_LIBRARIES ${_pg_link_libs})
+  check_c_source_compiles(
+    "#include <libpq-fe.h>\nint main(void){ return (int)PQlibVersion(); }"
+    PG_LIBPQ_LINKS)
+  unset(CMAKE_REQUIRED_INCLUDES)
+  unset(CMAKE_REQUIRED_LIBRARIES)
+endif()
+
+if(PG_INCLUDE_DIR AND PG_LIBRARY AND PG_LIBPQ_LINKS)
   add_library(postgres_driver MODULE
     src/entry.c
     src/connection.c
@@ -68,28 +103,14 @@ if(PG_INCLUDE_DIR AND PG_LIBRARY)
   # libpq headers are third-party: include them as SYSTEM so they are not subject
   # to the strict -Werror policy applied to our own code.
   target_include_directories(postgres_driver SYSTEM PRIVATE ${PG_INCLUDE_DIR})
-  target_link_libraries(postgres_driver PRIVATE ${PG_LIBRARY})
-
-  # A static libpq (.a) needs its transitive dependencies spelled out: OpenSSL
-  # (TLS transport) plus, on Windows, the socket/security/LDAP system libraries
-  # libpq calls into. A shared libpq resolves these itself, so this is skipped.
-  get_filename_component(_pg_lib_ext "${PG_LIBRARY}" EXT)
-  if(_pg_lib_ext STREQUAL ".a")
-    find_library(PG_SSL_LIBRARY NAMES ssl libssl HINTS ${_pg_libdir})
-    find_library(PG_CRYPTO_LIBRARY NAMES crypto libcrypto HINTS ${_pg_libdir})
-    if(PG_SSL_LIBRARY AND PG_CRYPTO_LIBRARY)
-      target_link_libraries(postgres_driver PRIVATE
-        ${PG_SSL_LIBRARY} ${PG_CRYPTO_LIBRARY})
-    endif()
-    if(WIN32)
-      target_link_libraries(postgres_driver PRIVATE
-        ws2_32 secur32 crypt32 wldap32 gdi32 advapi32)
-    endif()
-  endif()
+  target_link_libraries(postgres_driver PRIVATE ${_pg_link_libs})
 
   set_target_properties(postgres_driver PROPERTIES PREFIX "" OUTPUT_NAME "postgres")
   quaero_set_warnings(postgres_driver)
   message(STATUS "PostgreSQL driver: using ${PG_LIBRARY} (headers ${PG_INCLUDE_DIR})")
+elseif(PG_INCLUDE_DIR AND PG_LIBRARY)
+  message(STATUS "PostgreSQL driver: libpq at ${PG_LIBRARY} does not link for this "
+    "target (likely an architecture mismatch); plugin not built")
 else()
   message(STATUS "PostgreSQL driver: libpq not found; plugin not built")
 endif()
