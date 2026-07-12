@@ -93,6 +93,37 @@ export const es: Record<string, string> = {
   "empty.shortcuts": "Atajos",
   "empty.hint": "Abre una tabla del árbol o escribe SQL y pulsa {keys}.",
 
+  // tool panels — shared chrome (also defined in other panel PRs; identical values —
+  // on merge keep a single copy of this block)
+  "panel.refresh": "⟳ Refrescar",
+  "panel.refreshing": "Actualizando…",
+  "panel.close": "Cerrar",
+  "panel.loading": "Cargando…",
+
+  // users & privileges panel (UserManager.tsx)
+  "users.count": "{n} usuario(s)",
+  "users.newUser": "Nuevo usuario",
+  "users.name": "Nombre de usuario",
+  "users.hostPlaceholder": "Host (%  |  localhost)",
+  "users.hostAria": "Host del nuevo usuario",
+  "users.passPlaceholder": "Contraseña (opcional)",
+  "users.passAria": "Contraseña del nuevo usuario",
+  "users.create": "Crear usuario",
+  "users.users": "Usuarios",
+  "users.dropTitle": "Eliminar {who}",
+  "users.selectHint": "Selecciona un usuario para ver sus permisos.",
+  "users.permsOf": "Permisos de {who}",
+  "users.noPerms": "Sin permisos o no legibles.",
+  "users.grantRevoke": "Otorgar / revocar",
+  "users.hostLabel": "Host",
+  "users.scope": "Ámbito (ON …)",
+  "users.scopePlaceholder": "*.*  |  mibd.*  |  mibd.tabla",
+  "users.pickHint": "Elige privilegios y ámbito para ver el SQL.",
+  "users.grant": "Otorgar",
+  "users.revoke": "Revocar",
+  "users.dropDialogTitle": "Eliminar usuario",
+  "users.dropMessage": "Se eliminará {who}. Esta acción no se puede deshacer.",
+
   // errors
   "error.noActiveConn": "No hay conexión activa. Abre una conexión para ejecutar consultas.",
 

@@ -90,6 +90,37 @@ export const en: Record<string, string> = {
   "empty.shortcuts": "Shortcuts",
   "empty.hint": "Open a table from the tree or write SQL and press {keys}.",
 
+  // tool panels — shared chrome (also defined in other panel PRs; identical values —
+  // on merge keep a single copy of this block)
+  "panel.refresh": "⟳ Refresh",
+  "panel.refreshing": "Refreshing…",
+  "panel.close": "Close",
+  "panel.loading": "Loading…",
+
+  // users & privileges panel (UserManager.tsx)
+  "users.count": "{n} user(s)",
+  "users.newUser": "New user",
+  "users.name": "Username",
+  "users.hostPlaceholder": "Host (%  |  localhost)",
+  "users.hostAria": "New user's host",
+  "users.passPlaceholder": "Password (optional)",
+  "users.passAria": "New user's password",
+  "users.create": "Create user",
+  "users.users": "Users",
+  "users.dropTitle": "Delete {who}",
+  "users.selectHint": "Select a user to view its privileges.",
+  "users.permsOf": "Privileges of {who}",
+  "users.noPerms": "No privileges or not readable.",
+  "users.grantRevoke": "Grant / revoke",
+  "users.hostLabel": "Host",
+  "users.scope": "Scope (ON …)",
+  "users.scopePlaceholder": "*.*  |  mydb.*  |  mydb.table",
+  "users.pickHint": "Pick privileges and scope to see the SQL.",
+  "users.grant": "Grant",
+  "users.revoke": "Revoke",
+  "users.dropDialogTitle": "Delete user",
+  "users.dropMessage": "{who} will be deleted. This action cannot be undone.",
+
   // errors
   "error.noActiveConn": "No active connection. Open a connection to run queries.",
 
