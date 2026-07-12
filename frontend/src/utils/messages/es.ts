@@ -124,6 +124,21 @@ export const es: Record<string, string> = {
   "result.copyRowJson": "Copiar fila como JSON",
   "result.exportFmt": "Exportar {fmt}",
 
+  // result grid (ResultGrid.tsx)
+  "grid.rowsAffected": "{n} fila(s) afectada(s).",
+  "grid.sort": "Ordenar (asc / desc / ninguno)",
+  "grid.resize": "Ajustar ancho de columna",
+  "grid.filterPlaceholder": "Filtrar…",
+  "grid.filterBy": "Filtrar por {name}",
+  "grid.undoDelete": "Deshacer borrado",
+  "grid.deleteRow": "Borrar fila",
+  "grid.newRows": "Nuevas filas",
+  "grid.removeNewRow": "Quitar fila nueva",
+  "grid.noFilterMatch": "Ninguna fila de la página coincide con el filtro.",
+  "grid.truncated": "Mostrando las primeras {n} filas (resultado truncado). El orden y los filtros se aplican solo sobre las filas cargadas, no con ORDER BY/WHERE en el servidor.",
+  "grid.runToSee": "Ejecuta una consulta para ver resultados.",
+  "grid.running": "Ejecutando…",
+
   // errors
   "error.noActiveConn": "No hay conexión activa. Abre una conexión para ejecutar consultas.",
 
