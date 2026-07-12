@@ -117,6 +117,52 @@ export const en: Record<string, string> = {
   "tree.triggers": "Triggers",
   "tree.events": "Events",
 
+  // object-action toolbar (ObjectToolbar.tsx)
+  "objbar.aria": "Object actions",
+  "objbar.readOnlyNoPk": "Read-only: the table has no primary key.",
+  "objbar.import": "Import",
+  "objbar.generate": "Generate data",
+  "objbar.syncTitle": "Sync structure or data with another database",
+  "objbar.sync": "Sync",
+  "objbar.syncSchema": "Structure (schema)…",
+  "objbar.syncData": "Data…",
+  "objbar.transfer": "Transfer",
+  "objbar.addRow": "Row",
+  "objbar.confirm": "Confirm ({n})",
+  "objbar.discard": "Discard",
+  "objbar.chart": "Chart",
+  "objbar.exportTitle": "Export the result",
+  "objbar.export": "Export",
+
+  // result pane: edit preview, pagination bar, cell context menu (App.tsx)
+  "result.confirmChanges": "Confirm changes",
+  "result.willRun": "{n} statement(s) will run in the open transaction.",
+  "result.applyConfirm": "Apply and confirm",
+  "result.prev": "‹ Previous",
+  "result.next": "Next ›",
+  "result.rowsRange": "Rows {from}–{to}",
+  "result.pagingPaused": " · pagination paused while editing",
+  "result.rowDetail": "View row detail",
+  "result.copyCell": "Copy cell",
+  "result.copyRow": "Copy row",
+  "result.copyRowJson": "Copy row as JSON",
+  "result.exportFmt": "Export {fmt}",
+
+  // result grid (ResultGrid.tsx)
+  "grid.rowsAffected": "{n} row(s) affected.",
+  "grid.sort": "Sort (asc / desc / none)",
+  "grid.resize": "Adjust column width",
+  "grid.filterPlaceholder": "Filter…",
+  "grid.filterBy": "Filter by {name}",
+  "grid.undoDelete": "Undo delete",
+  "grid.deleteRow": "Delete row",
+  "grid.newRows": "New rows",
+  "grid.removeNewRow": "Remove new row",
+  "grid.noFilterMatch": "No row on the page matches the filter.",
+  "grid.truncated": "Showing the first {n} rows (result truncated). Sorting and filters apply only to the loaded rows, not with ORDER BY/WHERE on the server.",
+  "grid.runToSee": "Run a query to see results.",
+  "grid.running": "Running…",
+
   // errors
   "error.noActiveConn": "No active connection. Open a connection to run queries.",
 
