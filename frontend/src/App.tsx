@@ -104,6 +104,7 @@ import {
   fileNameFor,
   type ExportFormat,
 } from "./utils/exporters";
+import { queryEditTarget } from "./utils/queryTarget";
 import { buildXlsx, XLSX_MIME } from "./utils/xlsx";
 import { saveText, saveBytes } from "./utils/download";
 import type { TreeNode } from "./utils/tree";
@@ -863,6 +864,37 @@ export function App() {
     });
   };
 
+  // A hand-written single-table SELECT is editable too: the tree's "open table"
+  // path is not the only way to look at a table's rows. Derive the table from the
+  // SQL (utils/queryTarget), describe it, and attach the edit source only when its
+  // primary key came back in the result — without the key a row cannot be
+  // addressed unambiguously. Best-effort and out of band: any failure (a view, a
+  // keyless table, a describe error) simply leaves the tab read-only.
+  const attachQuerySource = async (
+    tabId: number,
+    sql: string,
+    conn: ActiveConnection,
+    result: ResultSet,
+  ) => {
+    const target = queryEditTarget(sql, conn.driver);
+    if (!target) return;
+    try {
+      const desc = await schemaDescribe(conn.connId, target.table, target.db, target.schema);
+      // The describe is done anyway — feed its columns to the autocomplete cache.
+      setColumnCache((c) => ({ ...c, [target.table]: describeColumnNames(desc) }));
+      const pk = describePkColumns(desc);
+      if (pk.length === 0) return;
+      // Every key column must be projected under its own name, or whereForRow
+      // would build no WHERE at all (see utils/edit.ts).
+      if (!pk.every((k) => result.columns.some((c) => c.name === k))) return;
+      // The tab may have run something else while we were describing.
+      if (results[tabId]?.pageSql !== sql) return;
+      setResults(tabId, "source", { ...target, pk });
+    } catch {
+      /* describe failed: the tab stays read-only (no source). */
+    }
+  };
+
   const run = async (sql: string, scope: RunScope = "document", offset = 0) => {
     const tab = current();
     if (!tab) return;
@@ -910,6 +942,8 @@ export function App() {
       // Record after the run so the entry carries its duration (issue #179);
       // page turns (offset > 0) are not logged.
       if (offset === 0) recordHistory(trimmed, conn, elapsedMs);
+      // A page turn keeps the source it already had; a fresh query derives it.
+      if (!keepSource) void attachQuerySource(id, trimmed, conn, result);
     } catch (err) {
       const elapsedMs = performance.now() - started;
       setResults(id, {
