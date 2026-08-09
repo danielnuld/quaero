@@ -31,9 +31,10 @@
 - [x] 3.3 `parseTreeRows`: normalizar el valor recibido antes de clasificar
 - [x] 3.4 Pruebas: `view`, `view ` (con relleno), `table`, valor desconocido; y el
       SQL de Informix generado por `objectListFor`
-- [ ] 3.5 Verificar contra un servidor Informix real que las vistas caen en la
-      carpeta Vistas y que el filtro de la lista de objetos las cuenta (el
-      relleno `CHAR` está deducido del catálogo, no observado)
+- [x] 3.5 Verificado en vivo contra el Informix de SIAJ (2026-08-08): `prod_orales`
+      devuelve 421 tablas y 173 vistas, y el árbol las agrupa en Tablas/Vistas.
+      Confirmada de paso la causa: el build anterior, sin `TRIM`, devolvía el
+      valor rellenado
 
 ## 4. Cierre
 
