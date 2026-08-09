@@ -96,10 +96,11 @@ char *ipc_utf8_repair(const char *s)
             i += len;
         } else {
             /* One replacement character per undecodable byte, so the damage
-               stays proportional to the damage in the input. */
-            out[o++] = (char)0xEF;
-            out[o++] = (char)0xBF;
-            out[o++] = (char)0xBD;
+               stays proportional to the damage in the input. Written as a string
+               literal because casting the constant bytes to a (signed) char is a
+               truncation MSVC rejects under -Werror. */
+            memcpy(out + o, "\xEF\xBF\xBD", 3);
+            o += 3;
             i++;
         }
     }
