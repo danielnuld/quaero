@@ -1,5 +1,6 @@
 #include "internal.h"
 #include "utils/odbc_types.h"
+#include "utils/utf16.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -71,11 +72,26 @@ static int alloc_columns(dbc_result *r, int ncols)
     return 0;
 }
 
+/*
+ * How many of the characters a describe call reported are safe to read out of a
+ * buffer of `cap` elements. name_len counts the characters *available*, so it
+ * exceeds the buffer when the name was truncated; and a driver may terminate
+ * earlier than it claimed, so an embedded NUL still wins. Never trust plain
+ * NUL-termination here: a driver that cannot represent a name through the entry
+ * point it was asked with may leave the buffer untouched, and a strlen over that
+ * runs off the end of the array.
+ */
+static size_t describe_name_len(SQLSMALLINT name_len, size_t cap)
+{
+    size_t avail = (name_len > 0) ? (size_t)name_len : 0;
+    return (avail > cap - 1) ? cap - 1 : avail;
+}
+
 /* Describe each column: cache its name and ODBC SQL type. */
 static int describe_columns(dbc_result *r)
 {
     for (int i = 0; i < r->ncols; i++) {
-        SQLCHAR     name[256];
+        SQLCHAR     name[256] = { 0 };
         SQLSMALLINT name_len = 0;
         SQLSMALLINT sql_type = 0;
         SQLULEN     col_size = 0;
@@ -87,13 +103,20 @@ static int describe_columns(dbc_result *r)
         if (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {
             return -1;
         }
-        r->col_types[i] = (short)sql_type;
-        size_t n = strlen((const char *)name) + 1;
-        r->col_names[i] = malloc(n);
+
+        size_t len = describe_name_len(name_len, sizeof name);
+        const void *nul = memchr(name, '\0', len);
+        if (nul != NULL) {
+            len = (size_t)((const SQLCHAR *)nul - name);
+        }
+
+        r->col_names[i] = malloc(len + 1);
         if (r->col_names[i] == NULL) {
             return -1;
         }
-        memcpy(r->col_names[i], name, n);
+        memcpy(r->col_names[i], name, len);
+        r->col_names[i][len] = '\0';
+        r->col_types[i] = (short)sql_type;
     }
     return 0;
 }
@@ -122,7 +145,23 @@ dbc_status ifx_run(dbc_conn *c, const char *sql, dbc_result **out)
     r->conn = c;
     ifx_track_stmt(c, r->stmt);
 
-    SQLRETURN rc = SQLExecDirect(r->stmt, (SQLCHAR *)sql, SQL_NTS);
+    /* A statement whose accents all live inside string literals goes through the
+       wide entry point, so the driver converts it to the database's code set. The
+       ANSI SQLExecDirect passes the bytes through untouched, which against a
+       single-byte database makes an accented literal match nothing at all —
+       silently, no error (issue #324). See ifx_sql_wide_safe for why the wide path
+       is deliberately not used for non-ASCII outside a literal.
+       A statement that is not well-formed UTF-8 also falls back: the conversion
+       returns NULL rather than guessing, and the old path is no worse than today. */
+    SQLRETURN rc;
+    unsigned short *wsql = ifx_sql_wide_safe(sql) ? ifx_utf8_to_utf16(sql, NULL)
+                                                  : NULL;
+    if (wsql != NULL) {
+        rc = SQLExecDirectW(r->stmt, (SQLWCHAR *)wsql, SQL_NTS);
+        free(wsql);
+    } else {
+        rc = SQLExecDirect(r->stmt, (SQLCHAR *)sql, SQL_NTS);
+    }
     if (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {
         ifx_stash_diag(c, SQL_HANDLE_STMT, r->stmt, "query");
         ifx_untrack_stmt(c, r->stmt);
