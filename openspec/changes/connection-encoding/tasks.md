@@ -66,14 +66,32 @@
 
 ## 4. Informix: los caminos que hoy no convierten ni informan
 
-- [ ] 4.1 `ifx_col_name` convierte por el mismo camino que las celdas (la
-      heurística queda como red; con el locale puesto no debería dispararse).
-- [ ] 4.2 `ifx_stash_diag` convierte el texto de `SQLGetDiagRec`. Test con un
-      mensaje simulado en Latin-1 con acentos.
-- [ ] 4.3 `ifx_next_row` (`query.c:265` y `:270`) llama a `ifx_stash_diag` antes de
-      devolver -1, por el handle de sentencia que ya tiene. Hoy devuelve -1 mudo y
-      el usuario recibe `"query failed"` sin motivo — reproducido en vivo con las
-      filas de bytes 0x80–0x9F. Test de que el fallo de fetch llega con texto.
+- [x] 4.0 Extraída la red UTF-8 a un módulo puro `src/utils/text.c`, con tests.
+      Estaba duplicada como dos `static` en `query.c` y ahora la necesitan tres
+      caminos. El camino rápido sigue sin asignar nada: el texto ya válido se
+      devuelve **con el mismo puntero**, y el test lo fija.
+- [x] 4.1 Los nombres de columna se convierten **una vez en `describe_columns`**, no
+      en cada llamada: así `ifx_col_name` sigue siendo un accesor plano, se respeta
+      su contrato de puntero estable y no hace falta un segundo búfer.
+      *Cobertura sólo por tests unitarios:* no se puede crear una columna con nombre
+      acentuado a través del driver (el identificador acentuado lo rechaza el
+      servidor), así que el caso vivo requeriría una BD heredada creada con otra
+      herramienta.
+- [x] 4.2 `ifx_stash_diag` convierte el texto ya ensamblado de `SQLGetDiagRec`,
+      truncando sin cortar una secuencia multibyte por la mitad si al ensanchar ya
+      no cabe en el búfer fijo. Perder la cola de un mensaje es mejor que perder el
+      mensaje: sin convertir, un error localizado con acentos rompía el mismo frame
+      que debía reportarlo y el usuario no veía **nada**.
+- [x] 4.3 `ifx_next_row` llama a `ifx_stash_diag` en sus **dos** salidas de error
+      (el `SQLFetch` y el `fetch_cell`) antes de devolver -1.
+      Verificado en vivo provocando el fallo con un desajuste de locale a propósito
+      (`client_locale=en_us.CP1252` contra una BD 8859-1): ahora llega
+      `fetch: [HY000] … Inexact character conversion during translation` donde
+      antes llegaba `query failed` a secas.
+- [x] 4.4 Verificada en vivo la red del driver forzando `client_locale=en_us.819`:
+      las siete filas llegan ensanchadas desde Latin-1, incluidas las dos de bytes
+      0x80–0x9F. Es el único modo de ejercitarla ahora, porque por defecto el CSDK
+      ya entrega UTF-8 y la red no se dispara.
 
 ## 6. El SQL que sale: literales acentuados (#324)
 
