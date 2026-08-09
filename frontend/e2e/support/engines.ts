@@ -1,0 +1,165 @@
+// The engine matrix: how to reach each database, and the fixture every test starts
+// from. Everything engine-specific lives here so a test reads the same for all four.
+//
+// The containers these DSNs point at are the ones created for the encoding work
+// (issue #323); e2e/README.md has the commands to start them.
+
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
+export type EngineName = "sqlite" | "postgres" | "mysql" | "informix";
+
+export interface EngineSpec {
+  readonly name: EngineName;
+  /** Driver name the core registers, and the DSN the frontend would store. */
+  readonly driver: string;
+  readonly dsn: Record<string, string>;
+  /** Human label for the saved connection, used by tests to click it. */
+  readonly label: string;
+  /** Statements that build the fixture, run in order through the core. */
+  readonly fixture: readonly string[];
+  /**
+   * What the grid MUST show for the three encoding rows, per engine.
+   *
+   * These differ on purpose, and that is the whole point: the same bytes mean
+   * different things depending on what the database declares. MySQL's "latin1" is
+   * really CP1252, so 0x93/0x94 are typographic quotes there, while PostgreSQL's
+   * true ISO 8859-1 maps them to the C1 controls U+0093/U+0094. Asserting one
+   * expectation for every engine would be asserting a bug.
+   */
+  readonly encodingRows: {
+    /** Bytes C3 B1: valid UTF-8 for "ñ", but "Ã±" in a single-byte code set. */
+    readonly discriminator: string;
+    /** A plain accented value. */
+    readonly accented: string;
+  };
+  /** How this engine spells "drop the fixture table if it is there". */
+  readonly dropFixture: string;
+}
+
+/** Rows 4..PAGE_ROWS+3 are filler, so paging has something to page through. */
+export const FILLER_ROWS = 25;
+
+const SQLITE_FILE = join(tmpdir(), "quaero-e2e.sqlite");
+
+/** Filler inserts shared by the SQL engines (all accept the same literal form). */
+function filler(): string[] {
+  const rows: string[] = [];
+  for (let i = 1; i <= FILLER_ROWS; i++) {
+    rows.push(
+      `INSERT INTO e2e_items (id, nombre) VALUES (${i + 10}, 'fila ${String(i).padStart(2, "0")}')`,
+    );
+  }
+  return rows;
+}
+
+export const ENGINES: readonly EngineSpec[] = [
+  {
+    name: "sqlite",
+    driver: "sqlite",
+    // A file, not ":memory:": the harness seeds through its own connection, and an
+    // in-memory database would be invisible to the one the page opens.
+    dsn: { path: SQLITE_FILE },
+    label: "E2E SQLite",
+    dropFixture: "DROP TABLE IF EXISTS e2e_items",
+    fixture: [
+      "CREATE TABLE e2e_items (id INTEGER, nombre TEXT)",
+      "INSERT INTO e2e_items (id, nombre) VALUES (1, 'Nogales')",
+      // SQLite is UTF-8 by definition, so the discriminating bytes simply are the
+      // UTF-8 for "Ã±" and there is no ambiguity to resolve.
+      "INSERT INTO e2e_items (id, nombre) VALUES (2, 'Ã±')",
+      "INSERT INTO e2e_items (id, nombre) VALUES (3, 'Cd. Obregón')",
+      ...filler(),
+    ],
+    encodingRows: { discriminator: "Ã±", accented: "Cd. Obregón" },
+  },
+  {
+    name: "postgres",
+    driver: "postgres",
+    dsn: {
+      host: "127.0.0.1",
+      port: "15432",
+      user: "postgres",
+      password: "test123",
+      database: "testdb",
+    },
+    label: "E2E PostgreSQL",
+    dropFixture: "DROP TABLE IF EXISTS e2e_items",
+    fixture: [
+      "CREATE TABLE e2e_items (id int, nombre text)",
+      "INSERT INTO e2e_items (id, nombre) VALUES (1, 'Nogales')",
+      // chr() in a LATIN1 database yields the byte, so this row really holds C3 B1.
+      "INSERT INTO e2e_items (id, nombre) VALUES (2, chr(195) || chr(177))",
+      "INSERT INTO e2e_items (id, nombre) VALUES (3, 'Cd. Obreg' || chr(243) || 'n')",
+      ...filler(),
+    ],
+    encodingRows: { discriminator: "Ã±", accented: "Cd. Obregón" },
+  },
+  {
+    name: "mysql",
+    driver: "mysql",
+    dsn: {
+      host: "127.0.0.1",
+      port: "13306",
+      user: "root",
+      password: "test123",
+      database: "testdb",
+    },
+    label: "E2E MySQL",
+    dropFixture: "DROP TABLE IF EXISTS e2e_items",
+    fixture: [
+      "CREATE TABLE e2e_items (id int, nombre varchar(60)) CHARACTER SET latin1",
+      "INSERT INTO e2e_items (id, nombre) VALUES (1, 'Nogales')",
+      "INSERT INTO e2e_items (id, nombre) VALUES (2, _latin1 X'C3B1')",
+      "INSERT INTO e2e_items (id, nombre) VALUES (3, _latin1 X'43642E204F62726567F36E')",
+      ...filler(),
+    ],
+    encodingRows: { discriminator: "Ã±", accented: "Cd. Obregón" },
+  },
+  {
+    name: "informix",
+    driver: "informix",
+    dsn: {
+      host: "127.0.0.1",
+      port: "9088",
+      server: "informix",
+      database: "quaero_enc",
+      user: "informix",
+      password: "in4mix",
+    },
+    label: "E2E Informix",
+    // Informix has no "IF EXISTS" on DROP TABLE in every version in play, so the
+    // seeder tolerates this statement failing.
+    dropFixture: "DROP TABLE e2e_items",
+    fixture: [
+      "CREATE TABLE e2e_items (id INT, nombre VARCHAR(60))",
+      "INSERT INTO e2e_items VALUES (1, 'Nogales')",
+      "INSERT INTO e2e_items VALUES (2, CHR(195) || CHR(177))",
+      "INSERT INTO e2e_items VALUES (3, 'Cd. Obreg' || CHR(243) || 'n')",
+      ...filler(),
+    ],
+    encodingRows: { discriminator: "Ã±", accented: "Cd. Obregón" },
+  },
+];
+
+export function engineByName(name: EngineName): EngineSpec {
+  const found = ENGINES.find((e) => e.name === name);
+  if (found === undefined) {
+    throw new Error(`unknown engine ${name}`);
+  }
+  return found;
+}
+
+/** The command that starts this engine's container, for the skip message. */
+export function startHint(name: EngineName): string {
+  switch (name) {
+    case "postgres":
+      return "docker start quaero-pg-test";
+    case "mysql":
+      return "docker start quaero-my-test";
+    case "informix":
+      return "docker start quaero-ifx-test  (takes ~1 min to come online)";
+    case "sqlite":
+      return "no container needed; check the build produced the sqlite plugin";
+  }
+}
