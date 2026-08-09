@@ -233,6 +233,9 @@ dbc_status ifx_connect(const char *dsn_json, dbc_conn **out)
         .database = str_field(root, "database"),
         .user     = str_field(root, "user"),
         .password = str_field(root, "password"),
+        /* Optional; absent leaves the CSDK's own defaults in place (issue #323). */
+        .client_locale = str_field(root, "client_locale"),
+        .db_locale     = str_field(root, "db_locale"),
     };
 
     char conn_str[2048];
