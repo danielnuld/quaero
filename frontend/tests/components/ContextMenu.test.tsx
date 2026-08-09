@@ -73,11 +73,9 @@ describe("ContextMenu placement (issue #318)", () => {
   // of the bug (the clamp used to measure a still-detached element and so never
   // moved anything). Stub the box so the clamp has a real size to work with.
   const stubSize = (width: number, height: number) => {
-    const proto = HTMLDivElement.prototype as unknown as {
-      getBoundingClientRect: () => DOMRect;
-    };
+    const proto = HTMLDivElement.prototype;
     const original = proto.getBoundingClientRect;
-    proto.getBoundingClientRect = function () {
+    proto.getBoundingClientRect = function (this: HTMLDivElement) {
       return this.classList?.contains("context-menu")
         ? ({ width, height, x: 0, y: 0, top: 0, left: 0, right: width, bottom: height } as DOMRect)
         : original.call(this);
