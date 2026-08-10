@@ -79,6 +79,27 @@ describeEngine("sqlite", () => {
     await expect(page.getByText("Snippets").first()).toBeVisible();
   });
 
+  test("the tree's tools menu shows the same icons, not emoji", async ({ app }) => {
+    const { page } = app;
+    await app.open();
+    await connect(app);
+
+    await page.getByRole("button", { name: "Herramientas" }).click();
+
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+
+    // The same nine tools as the ribbon's second group, each with its own icon. The
+    // exact-name match is what proves the emoji is gone: the label used to have one
+    // glued in front of it, so the accessible name was "🖥️  Monitor de servidor" —
+    // a screen reader read the decoration aloud and this match would fail.
+    for (const name of RIBBON.slice(3)) {
+      const item = menu.getByRole("menuitem", { name, exact: true });
+      await expect(item, `${name} is in the tools menu`).toBeVisible();
+      await expect(item.locator("svg")).toHaveCount(1);
+    }
+  });
+
   test("object actions stay disabled until a connection is open", async ({ app }) => {
     const { page } = app;
     await app.open();
