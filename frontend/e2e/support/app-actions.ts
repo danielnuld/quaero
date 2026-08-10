@@ -86,3 +86,53 @@ export async function runSql(page: Page, sql: string): Promise<void> {
 export function cell(page: Page, value: string) {
   return page.getByText(value, { exact: true });
 }
+
+/**
+ * Puts the grid into edit mode and narrows it to the single row `id`, so that row's
+ * cells are the only ones on screen.
+ *
+ * ACCESSIBILITY GAP: an editable cell is a textbox with no accessible name, so
+ * there is no way to ask for "the nombre cell of row 1". Filtering down to one row
+ * first makes the remaining two textboxes unambiguous without depending on grid
+ * geometry. Labelling the cells is recorded as task 2.12.
+ */
+export async function editRow(page: Page, nameFragment: string): Promise<void> {
+  await page.getByRole("button", { name: "Editar", exact: true }).click();
+  // Filtering is by substring, so an id of "1" also matches 11, 12, 21… — narrow on
+  // a name fragment instead, and one that survives the edit so the row does not
+  // vanish from under the test halfway through.
+  await page.getByRole("searchbox", { name: "Filtrar por nombre" }).fill(nameFragment);
+  // Identify the cell by the value it holds rather than by a position: counting
+  // textboxes was wrong twice already (the object filter and the SQL editor are
+  // textboxes too), and an index would break again the next time the chrome
+  // changes.
+  await expect(nombreCell(page)).toHaveValue(new RegExp(nameFragment));
+}
+
+/**
+ * The `nombre` cell of the single row `editRow` narrowed to: the last textbox on the
+ * page, since the grid renders after all of the surrounding chrome.
+ */
+export function nombreCell(page: Page) {
+  return page.getByRole("textbox").last();
+}
+
+/** Reads a value straight from the database, to check what the UI really did. */
+export async function readNombre(app: App, id: number): Promise<string | null> {
+  const opened = await app.rpc.call("conn.open", {
+    driver: app.engine.driver,
+    dsn: app.engine.dsn,
+  });
+  const connId = (opened.result as { connId: string }).connId;
+  try {
+    const res = await app.rpc.call("query.run", {
+      connId,
+      sql: `SELECT nombre FROM e2e_items WHERE id = ${id}`,
+      limit: 1,
+    });
+    const rows = (res.result as { rows: (string | null)[][] } | undefined)?.rows ?? [];
+    return rows[0]?.[0] ?? null;
+  } finally {
+    await app.rpc.call("conn.close", { connId });
+  }
+}

@@ -72,7 +72,7 @@ export const test = base.extend<Options & Fixtures, WorkerFixtures>({
   app: async ({ page, rpc, engineName, uiLocale, seedConnection }, use) => {
     const engine = engineByName(engineName);
 
-    await installBridge(page, rpc);
+    const closeConnections = await installBridge(page, rpc);
     await seedBrowserState(page, {
       locale: uiLocale,
       connections: seedConnection ? [engine] : [],
@@ -104,6 +104,10 @@ export const test = base.extend<Options & Fixtures, WorkerFixtures>({
     };
 
     await use(app);
+
+    // Close before asserting: a left-open transaction would poison the next test's
+    // reseed, and that must not depend on the test having remembered to disconnect.
+    await closeConnections();
 
     expect(consoleErrors, "the page reported no unexpected errors").toEqual([]);
   },
@@ -140,7 +144,7 @@ export function describeEngine(name: EngineName, body: () => void): void {
 
     // Every file rebuilds its fixture, so two runs in a row start identically no
     // matter what the previous one inserted or deleted.
-    test.beforeAll(async ({ rpc }) => {
+    test.beforeEach(async ({ rpc }) => {
       await reseed(rpc, name);
     });
 

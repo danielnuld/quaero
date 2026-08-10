@@ -75,12 +75,29 @@
         forma de acotar una aserción «dentro del grid».
 
 - [ ] 2.2 Crear una conexión rellenando el formulario, que sobreviva a una recarga.
-- [ ] 2.7 Edición transaccional: insert + update + delete + commit.
-      Desbloqueado ya: el fixture necesitaba una **clave primaria**, sin ella el grid
-      abre en modo «Solo lectura: la tabla no tiene clave primaria» y estos casos no
-      podrían ejecutarse. Añadida.
-- [ ] 2.8 Rollback: el cambio no queda.
-- [ ] 2.9 Export del resultado: mismas filas y valores, acentos incluidos.
+      **Escrito pero `test.fixme`**: rellenando nombre, motor y todos los campos por
+      sus etiquetas de producción, pulsar Guardar deja la lista en «No hay conexiones
+      guardadas» y no aparece ningún error. Sin causa identificada todavía; siguiente
+      paso, mirar qué tráfico emite el clic por el puente. Marcado para que se vea en
+      el código y no pueda dar falso verde.
+- [x] 2.7 Edición: editar una celda, ver el contador de cambios pendientes, y que la
+      confirmación **muestre el SQL exacto** (`UPDATE … WHERE "id" = '1'`) antes de
+      aplicarlo. Verificado releyendo de la base, no del grid: que el grid muestre un
+      valor no prueba nada sobre lo que se confirmó.
+      Requisito que salió a la luz: el fixture necesitaba **clave primaria**, sin ella
+      el grid abre «Solo lectura» y esto no podría ejecutarse.
+- [x] 2.8 Descartar: la base queda intacta.
+      **Destapó un defecto del arnés**: resembrar en `beforeAll` dejaba que la prueba
+      de commit contaminara esta, y en Informix la transacción abierta que quedaba
+      bloqueaba el `DROP TABLE` de la siembra siguiente. Ahora se resiembra por prueba
+      y el puente **lleva la cuenta de las conexiones que abre la página** para
+      cerrarlas (con rollback) al terminar. El aislamiento es cosa del arnés, no de
+      que cada prueba se acuerde.
+- [x] 2.9 Export a CSV con los acentos intactos, incluida la fila discriminadora.
+      Chromium ofrece la File System Access API y la app la prefiere, lo que abre un
+      diálogo nativo que ninguna automatización conduce; la prueba la retira para
+      forzar el camino de respaldo documentado. El diálogo nativo pertenece a la
+      superficie de la shell, que esta vía no cubre.
 
 ## 3. Fases siguientes, por área (a priorizar, no comprometidas)
 
