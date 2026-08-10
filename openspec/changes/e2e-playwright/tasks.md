@@ -35,27 +35,52 @@
 
 ## 2. Camino crítico por motor (fase 1)
 
-- [ ] 2.1 Conectar desde una conexión guardada y ver el estado conectado.
+- [x] 2.1 Conectar desde una conexión guardada: el pie deja de decir «Sin conexión»,
+      la fila pasa a «conectado» y las acciones de objeto se habilitan.
 - [ ] 2.2 Crear una conexión **rellenando el formulario**, que sobreviva a una
       recarga. Es el primer camino de cualquier usuario nuevo y no puede quedar
       cubierto sólo por siembra.
-- [ ] 2.3 Árbol de objetos: la tabla de fixture aparece al expandir.
-- [ ] 2.4 Describe de la tabla: columnas y tipos.
-- [ ] 2.5 SELECT paginado: primera página, y la siguiente muestra filas distintas.
-- [ ] 2.6 Una sentencia que el motor rechaza: se muestra su mensaje y la interfaz
-      sigue usable, sin peticiones sin respuesta.
+- [x] 2.3 Árbol de objetos: la tabla de fixture aparece expandiendo la ruta del
+      motor. **La forma del árbol difiere de verdad**: Postgres mete un nivel de
+      esquema (`testdb` → `public` → Tablas) y SQLite llama `main` a su único
+      esquema, así que la ruta se declara en la matriz de motores.
+- [x] 2.4 Columnas con su tipo: la cabecera del grid las nombra (`id int`,
+      `nombre text`), que es el «describe» que ve un usuario al abrir la tabla.
+- [x] 2.5 SELECT paginado: primera página con «Anterior» deshabilitado, y la
+      siguiente muestra filas distintas.
+- [x] 2.6 Sentencia rechazada: llega el mensaje del motor y la interfaz sigue
+      usable — una consulta buena después funciona.
 - [ ] 2.7 Edición transaccional: insert + update + delete + commit, verificado
       releyendo.
 - [ ] 2.8 Rollback: el cambio no queda.
 - [ ] 2.9 Export del resultado: el contenido lleva las mismas filas y valores.
-- [ ] 2.10 Desconectar: estado desconectado y objetos ya no navegables.
-- [ ] 2.11 Encoding: valores acentuados exactos, la fila `C3 B1` mostrando lo que
-      la base **significa**, filtrar por un valor acentuado devolviendo sus filas, y
-      export conservando los caracteres. Comparaciones por valor exacto, nunca
-      «contiene acentos».
-- [ ] 2.12 Anotar en este fichero cada control que no se pudo alcanzar por rol o
-      etiqueta, como trabajo de accesibilidad sobre el componente. Ningún selector
-      por clase CSS ni por posición.
+- [x] 2.10 Desconectar: vuelve «Sin conexión» y las acciones se deshabilitan.
+- [x] 2.11 Encoding: valor acentuado y la fila discriminadora, por valor **exacto**,
+      más que `ñ` NO aparezca donde el dato es `Ã±`. Y filtrar por un valor acentuado
+      devolviendo sus filas.
+      **Postgres marcado como fallo esperado**: en x86 no convierte (ver 4.7).
+- [x] 2.12 **Tres huecos de accesibilidad encontrados al escribir las pruebas.** Van
+      como trabajo sobre el componente, no como `data-testid`: un testid sólo lo ve
+      la prueba, una etiqueta la ve también el usuario.
+      - **`ObjectTree`**: las filas son `<div>` con `onClick`, sin `role="treeitem"`
+        ni `tabIndex`. No se alcanzan por teclado ni por lector de pantalla, y
+        `getByRole` no las ve. Las pruebas usan el `title` de la fila, que al menos
+        es perceptible. Es el hueco más serio: un árbol de objetos inutilizable sin
+        ratón.
+      - **`SqlEditor`**: el textbox de CodeMirror no tiene nombre accesible, así que
+        no se distingue del filtro de objetos por rol —
+        `getByRole("textbox").first()` escribía la consulta en el filtro. Un
+        `aria-label` lo arregla.
+      - **`ResultGrid`**: no expone `role="grid"` ni roles de celda, así que no hay
+        forma de acotar una aserción «dentro del grid».
+
+- [ ] 2.2 Crear una conexión rellenando el formulario, que sobreviva a una recarga.
+- [ ] 2.7 Edición transaccional: insert + update + delete + commit.
+      Desbloqueado ya: el fixture necesitaba una **clave primaria**, sin ella el grid
+      abre en modo «Solo lectura: la tabla no tiene clave primaria» y estos casos no
+      podrían ejecutarse. Añadida.
+- [ ] 2.8 Rollback: el cambio no queda.
+- [ ] 2.9 Export del resultado: mismas filas y valores, acentos incluidos.
 
 ## 3. Fases siguientes, por área (a priorizar, no comprometidas)
 
@@ -97,7 +122,7 @@ los 44 componentes de `frontend/src/components`.
       motores que sí caben, y decidir —midiendo, no adivinando— si entra en la
       puerta o queda nocturna. Informix se queda fuera por su ODBC de 32 bits.
 
-## 4. Cierre de la fase 1 (grupo 1 cerrado; el grupo 2 queda para la fase 2)
+## 4. Cierre de la fase 1 (grupo 1 cerrado; del grupo 2 faltan 2.2 y 2.7–2.9)
 
 - [x] 4.1 La suite del arnés pasa en verde con los cuatro motores listos
       (sqlite, postgres, mysql, informix), y se salta limpiamente los que no:
@@ -124,3 +149,17 @@ los 44 componentes de `frontend/src/components`.
       `WITH_SSL`. Basta forzarlo a estático en `cmake/QuaeroMariaDB.cmake`, y de
       paso `sha256_password`. Verificado en vivo contra MySQL 8.4 con x86, y smoke
       12/12.
+
+- [ ] 4.7 Abrir el issue del **segundo defecto que encontró el arnés**: en el build
+      **x86 —la arquitectura que se publica— libpq ignora el parámetro
+      `client_encoding=UTF8`**, así que `SHOW client_encoding` responde `LATIN1` y
+      los bytes llegan sin convertir. Contra la misma BD, mismo SQL: x86 muestra `ñ`
+      donde el dato es `Ã±`, y `Cd. Obregón` llega con U+FFFD; el x64 lo muestra
+      bien. Además un `WHERE nombre = 'Cd. Obregón'` devuelve **0 filas**.
+      Consecuencia incómoda: la verificación de PostgreSQL del PR #325 se hizo sobre
+      x64, o sea sobre la arquitectura equivocada, y ese arreglo **no llegó al
+      producto**. Sospecha a investigar: el x86 enlaza un libpq estático compilado
+      desde fuente (`QUAERO_LIBPQ`), y probablemente sin las tablas de conversión de
+      codificación, con lo que libpq descarta el parámetro en silencio.
+      Los dos casos afectados están marcados `test.fail()` para que la suite quede
+      honesta y avise en cuanto se arregle.

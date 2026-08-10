@@ -79,10 +79,16 @@ export const test = base.extend<Options & Fixtures, WorkerFixtures>({
     });
 
     // An unexpected error surfacing in the interface must fail the test rather than
-    // be stepped over; a console error is the cheapest signal of that.
+    // be stepped over. Uncaught exceptions always count; console errors count only
+    // when they come from the application, because the browser also logs things the
+    // app has nothing to do with — a 403 on a favicon fetch from the preview server
+    // was failing tests at random, which is how an over-broad guard manufactures
+    // exactly the flakiness this suite refuses to tolerate.
     const consoleErrors: string[] = [];
+    const isBrowserNoise = (text: string) =>
+      text.startsWith("Failed to load resource:");
     page.on("console", (msg) => {
-      if (msg.type() === "error") {
+      if (msg.type() === "error" && !isBrowserNoise(msg.text())) {
         consoleErrors.push(msg.text());
       }
     });

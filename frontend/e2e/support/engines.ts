@@ -35,9 +35,21 @@ export interface EngineSpec {
   };
   /** How this engine spells "drop the fixture table if it is there". */
   readonly dropFixture: string;
+  /**
+   * Container nodes to expand, in order, to reach the fixture table in the object
+   * tree. The shape genuinely differs: PostgreSQL puts a schema between the
+   * database and the tables, and opens its active database already expanded, while
+   * SQLite calls its only schema "main".
+   */
+  readonly treePath: readonly string[];
 }
 
-/** Rows 4..PAGE_ROWS+3 are filler, so paging has something to page through. */
+/**
+ * Filler rows, so paging has something to page through.
+ *
+ * The fixture needs a PRIMARY KEY: without one the grid opens read-only ("la tabla
+ * no tiene clave primaria") and the editing cases could never run at all.
+ */
 export const FILLER_ROWS = 25;
 
 const SQLITE_FILE = join(tmpdir(), "quaero-e2e.sqlite");
@@ -63,7 +75,7 @@ export const ENGINES: readonly EngineSpec[] = [
     label: "E2E SQLite",
     dropFixture: "DROP TABLE IF EXISTS e2e_items",
     fixture: [
-      "CREATE TABLE e2e_items (id INTEGER, nombre TEXT)",
+      "CREATE TABLE e2e_items (id INTEGER PRIMARY KEY, nombre TEXT)",
       "INSERT INTO e2e_items (id, nombre) VALUES (1, 'Nogales')",
       // SQLite is UTF-8 by definition, so the discriminating bytes simply are the
       // UTF-8 for "Ã±" and there is no ambiguity to resolve.
@@ -72,6 +84,7 @@ export const ENGINES: readonly EngineSpec[] = [
       ...filler(),
     ],
     encodingRows: { discriminator: "Ã±", accented: "Cd. Obregón" },
+    treePath: ["main", "Tablas"],
   },
   {
     name: "postgres",
@@ -86,7 +99,7 @@ export const ENGINES: readonly EngineSpec[] = [
     label: "E2E PostgreSQL",
     dropFixture: "DROP TABLE IF EXISTS e2e_items",
     fixture: [
-      "CREATE TABLE e2e_items (id int, nombre text)",
+      "CREATE TABLE e2e_items (id int PRIMARY KEY, nombre text)",
       "INSERT INTO e2e_items (id, nombre) VALUES (1, 'Nogales')",
       // chr() in a LATIN1 database yields the byte, so this row really holds C3 B1.
       "INSERT INTO e2e_items (id, nombre) VALUES (2, chr(195) || chr(177))",
@@ -94,6 +107,8 @@ export const ENGINES: readonly EngineSpec[] = [
       ...filler(),
     ],
     encodingRows: { discriminator: "Ã±", accented: "Cd. Obregón" },
+    // Three levels: PostgreSQL puts a schema between the database and the tables.
+    treePath: ["testdb", "public", "Tablas"],
   },
   {
     name: "mysql",
@@ -108,13 +123,14 @@ export const ENGINES: readonly EngineSpec[] = [
     label: "E2E MySQL",
     dropFixture: "DROP TABLE IF EXISTS e2e_items",
     fixture: [
-      "CREATE TABLE e2e_items (id int, nombre varchar(60)) CHARACTER SET latin1",
+      "CREATE TABLE e2e_items (id int PRIMARY KEY, nombre varchar(60)) CHARACTER SET latin1",
       "INSERT INTO e2e_items (id, nombre) VALUES (1, 'Nogales')",
       "INSERT INTO e2e_items (id, nombre) VALUES (2, _latin1 X'C3B1')",
       "INSERT INTO e2e_items (id, nombre) VALUES (3, _latin1 X'43642E204F62726567F36E')",
       ...filler(),
     ],
     encodingRows: { discriminator: "Ã±", accented: "Cd. Obregón" },
+    treePath: ["testdb", "Tablas"],
   },
   {
     name: "informix",
@@ -132,13 +148,14 @@ export const ENGINES: readonly EngineSpec[] = [
     // seeder tolerates this statement failing.
     dropFixture: "DROP TABLE e2e_items",
     fixture: [
-      "CREATE TABLE e2e_items (id INT, nombre VARCHAR(60))",
+      "CREATE TABLE e2e_items (id INT PRIMARY KEY, nombre VARCHAR(60))",
       "INSERT INTO e2e_items VALUES (1, 'Nogales')",
       "INSERT INTO e2e_items VALUES (2, CHR(195) || CHR(177))",
       "INSERT INTO e2e_items VALUES (3, 'Cd. Obreg' || CHR(243) || 'n')",
       ...filler(),
     ],
     encodingRows: { discriminator: "Ã±", accented: "Cd. Obregón" },
+    treePath: ["quaero_enc", "Tablas"],
   },
 ];
 
