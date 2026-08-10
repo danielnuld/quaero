@@ -78,17 +78,6 @@ describeAllEngines(["sqlite", "postgres", "mysql", "informix"], (engineName) => 
   });
 
   test("shows accented values exactly as the database means them", async ({ app }) => {
-    // KNOWN DEFECT, not a flaky test: on the x86 build — the architecture Quaero
-    // ships — libpq ignores the client_encoding=UTF8 connection parameter, so
-    // "SHOW client_encoding" answers LATIN1 and the bytes arrive unconverted. The
-    // same database read through an x64 build is correct. Marked expected-to-fail so
-    // the suite stays honest: whoever fixes the build gets an "unexpected pass" and
-    // has to delete this line.
-    test.fail(
-      engineName === "postgres",
-      "x86 libpq ignores client_encoding=UTF8",
-    );
-
     await app.open();
     await connect(app);
     await openFixtureTable(app);
@@ -106,17 +95,6 @@ describeAllEngines(["sqlite", "postgres", "mysql", "informix"], (engineName) => 
   });
 
   test("filters by an accented value and finds its rows", async ({ app }) => {
-    // KNOWN DEFECT, not a flaky test: on the x86 build — the architecture Quaero
-    // ships — libpq ignores the client_encoding=UTF8 connection parameter, so
-    // "SHOW client_encoding" answers LATIN1 and the bytes arrive unconverted. The
-    // same database read through an x64 build is correct. Marked expected-to-fail so
-    // the suite stays honest: whoever fixes the build gets an "unexpected pass" and
-    // has to delete this line.
-    test.fail(
-      engineName === "postgres",
-      "x86 libpq ignores client_encoding=UTF8",
-    );
-
     await app.open();
     await connect(app);
 

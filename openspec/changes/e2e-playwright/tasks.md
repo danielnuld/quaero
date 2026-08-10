@@ -150,16 +150,19 @@ los 44 componentes de `frontend/src/components`.
       paso `sha256_password`. Verificado en vivo contra MySQL 8.4 con x86, y smoke
       12/12.
 
-- [ ] 4.7 Abrir el issue del **segundo defecto que encontró el arnés**: en el build
-      **x86 —la arquitectura que se publica— libpq ignora el parámetro
-      `client_encoding=UTF8`**, así que `SHOW client_encoding` responde `LATIN1` y
-      los bytes llegan sin convertir. Contra la misma BD, mismo SQL: x86 muestra `ñ`
-      donde el dato es `Ã±`, y `Cd. Obregón` llega con U+FFFD; el x64 lo muestra
-      bien. Además un `WHERE nombre = 'Cd. Obregón'` devuelve **0 filas**.
-      Consecuencia incómoda: la verificación de PostgreSQL del PR #325 se hizo sobre
-      x64, o sea sobre la arquitectura equivocada, y ese arreglo **no llegó al
-      producto**. Sospecha a investigar: el x86 enlaza un libpq estático compilado
-      desde fuente (`QUAERO_LIBPQ`), y probablemente sin las tablas de conversión de
-      codificación, con lo que libpq descarta el parámetro en silencio.
-      Los dos casos afectados están marcados `test.fail()` para que la suite quede
-      honesta y avise en cuanto se arregle.
+- [x] 4.7 **CORRECCIÓN: el «segundo defecto» no existía.** Di por bueno que en x86
+      libpq ignoraba `client_encoding=UTF8` porque `SHOW client_encoding` respondía
+      `LATIN1`. La causa real: **el `postgres.dll` staged era del 08-04 y nunca se
+      recompiló** tras el cambio del PR #325. Recompilado, x86 devuelve `UTF8`,
+      `Ã±` y `Cd. Obregón` correctos, y el `WHERE` acentuado encuentra su fila. Los
+      dos `test.fail()` retirados. El arreglo del PR #325 siempre estuvo bien.
+
+- [x] 4.8 **El defecto real era del arnés: confiaba en artefactos obsoletos.**
+      `support/freshness.ts` compara la fecha de cada binario staged con la de sus
+      fuentes y **aborta la ejecución** nombrando qué recompilar. Al activarlo cazó
+      algo peor que el falso fallo de 4.7: **el `quaero-rpc.exe` del x86 era más
+      antiguo que `core/`**, o sea que la red UTF-8 del grupo 2 nunca se había
+      compilado ahí y la suite llevaba rato dando verde sobre un núcleo sin ella.
+      Un falso fallo cuesta una tarde; un falso verde se cree.
+      Verificado en las dos direcciones: con una fuente tocada aborta con la lista,
+      y tras recompilar el x86 completo pasan las 41.
