@@ -227,19 +227,34 @@ body {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+/* Monochrome tiles: no coloured plate, so the accent is spent on state instead of
+   on eleven buttons competing at rest. The icon inherits `color`, which is what
+   makes hover/focus able to move it at all — the emoji this replaced painted
+   themselves and ignored the colour they were given. */
 .att-ic {
   width: 28px;
   height: 28px;
   border-radius: 7px;
   display: grid;
   place-items: center;
-  font-size: 14px;
-  font-weight: 700;
+  color: var(--text-dim);
+}
+.att-ic svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+.att-btn:hover:not(:disabled) .att-ic,
+.att-btn:focus-visible .att-ic {
+  color: var(--accent);
 }
 .att-lb {
   font-size: 11px;
   color: var(--text-dim);
   white-space: nowrap;
+}
+.att-btn:hover:not(:disabled) .att-lb {
+  color: var(--text);
 }
 
 /* Object-list view (design proposal, phase 3): a metadata grid of a database's
