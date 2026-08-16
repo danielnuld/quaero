@@ -3342,8 +3342,10 @@ button.grid-action.danger:hover:not(:disabled) {
 
 /* The user-manager delete button is the shared `.grid-action.danger` icon button
    (#185); `.um-drop` only adds the reveal-on-row-hover layout on top of it. */
+/* No `margin-left: auto` here: `.um-chips` (always rendered, even empty) carries
+   it and pushes both to the right edge. Two auto margins in one flex row SPLIT
+   the free space instead of stacking, which left the badges floating mid-row. */
 .um-drop {
-  margin-left: auto;
   opacity: 0;
 }
 
