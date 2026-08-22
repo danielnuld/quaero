@@ -40,15 +40,21 @@
   --chart-7: #d55181;
   --chart-8: #d95926;
   /* Elevación y foco (#386): dos sombras, no seis recetas sueltas. */
+  --bg-overlay: #2e2e38;
   --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
   --focus-ring: rgba(124, 124, 240, 0.4);
 }
 
 :root[data-theme="light"] {
-  --bg: #f7f7fa;
-  --bg-elev: #ffffff;
-  --bg-elev2: #ececf1;
+  /* El claro era una inversión mecánica del oscuro: el cromo en #ffffff y el
+     lienzo de datos en #f7f7fa, así que la rejilla —lo que el usuario viene a
+     ver— acababa siendo la superficie más apagada de la pantalla. Aquí el
+     lienzo es el blanco que sostiene la mirada y el cromo se apoya en un gris
+     tintado, que es la relación que el tema oscuro ya tenía bien. */
+  --bg: #ffffff;
+  --bg-elev: #f2f4f7;
+  --bg-elev2: #e6e9ef;
   --border: #d3d3dc;
   --text: #1e1e24;
   --text-dim: #63636f;
@@ -63,7 +69,7 @@
   /* #b5651d daba 4.05/4.34/3.68 sobre bg/elev/elev2 — sub-AA en las tres
      (issue #386). Este clarea 5.32/5.69/4.83. */
   --null: #9c5416;
-  --number: #217a47;
+  --number: #1d6e3f;
   --error: #c62828;
   --error-fg: #ffffff;
   /* Chart palette, light steps of the same validated theme. */
@@ -77,6 +83,7 @@
   --chart-8: #eb6834;
   /* En claro la sombra es neutra-fría y mucho más suave: sobre un fondo claro
      una sombra negra al 50 % se lee como suciedad, no como elevación. */
+  --bg-overlay: #ffffff;
   --shadow-sm: 0 4px 16px rgba(20, 22, 30, 0.12);
   --shadow-lg: 0 12px 40px rgba(20, 22, 30, 0.18);
   --focus-ring: rgba(91, 91, 214, 0.32);
@@ -716,7 +723,7 @@ body {
   left: 0;
   right: 0;
   z-index: 30;
-  background: var(--bg-elev);
+  background: var(--bg-overlay);
   border: 1px solid var(--border);
   border-top: none;
   box-shadow: var(--shadow-lg);
@@ -750,7 +757,7 @@ body {
   padding: var(--sp-6);
 }
 .update-modal {
-  background: var(--bg-elev);
+  background: var(--bg-overlay);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-lg);
@@ -1305,7 +1312,10 @@ body {
    nth-child stripe would flicker. color-mix keeps it subtle in both themes
    (the old rgba(255,255,255,…) was invisible on the light palette). */
 .grid-row.row-odd {
-  background: color-mix(in srgb, var(--text) 3%, transparent);
+  /* Al 3 % la banda eran 6 unidades de 255 en oscuro y 7 en claro: medida
+     sobre la captura, invisible. Al 6 % son 12 y 14, que ya guían el ojo a lo
+     largo de la fila sin ensuciar el lienzo (issue #386). */
+  background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 
 .grid-row:hover {
@@ -1500,7 +1510,7 @@ body {
   z-index: 50;
   min-width: 180px;
   padding: var(--sp-2);
-  background: var(--bg-elev2);
+  background: var(--bg-overlay);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-lg);
@@ -1841,7 +1851,7 @@ kbd {
 }
 
 .modal {
-  background: var(--bg-elev);
+  background: var(--bg-overlay);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   padding: var(--sp-5);
@@ -4259,7 +4269,7 @@ button.grid-action.danger:hover:not(:disabled) {
   max-height: 60vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-elev);
+  background: var(--bg-overlay);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-lg);
@@ -4411,7 +4421,7 @@ button.grid-action.danger:hover:not(:disabled) {
 }
 
 .conn-export {
-  background: var(--bg-elev);
+  background: var(--bg-overlay);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   padding: var(--sp-3);
