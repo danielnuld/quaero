@@ -167,11 +167,7 @@ test("record the demo video", async ({ page }) => {
     await beat(700);
 
     // --- 4. Tools ----------------------------------------------------------
-    // Unfolded once here and left open for both tools: the ⋯ strip replaced the
-    // ribbon in #386, and folding it between beats would only add a flicker.
-    const toolStrip = page.getByRole("button", { name: "Barra de herramientas", exact: true });
     const ribbon = page.getByRole("toolbar", { name: "Acciones" });
-    await toolStrip.click();
 
     await caption("Diagrama ER con las llaves foráneas reales");
     await ribbon.getByRole("button", { name: "Diagrama ER", exact: true }).click();

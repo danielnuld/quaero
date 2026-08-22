@@ -22,7 +22,6 @@ describeAllEngines(["sqlite", "postgres", "mysql", "informix"], (engineName) => 
     // Before connecting the interface says so, and the tools are dead. They live
     // in the ⋯ strip now (#386), which is folded until asked.
     await expect(app.page.getByText("Sin conexión")).toBeVisible();
-    await app.page.getByRole("button", { name: "Barra de herramientas", exact: true }).click();
     const monitor = app.page
       .getByRole("toolbar", { name: "Acciones" })
       .getByRole("button", { name: "Monitor de servidor", exact: true });
@@ -217,7 +216,6 @@ describeAllEngines(["sqlite", "postgres", "mysql", "informix"], (engineName) => 
     await disconnect(app.page);
 
     await expect(app.page.getByText("Sin conexión")).toBeVisible();
-    await app.page.getByRole("button", { name: "Barra de herramientas", exact: true }).click();
     await expect(
       app.page
         .getByRole("toolbar", { name: "Acciones" })

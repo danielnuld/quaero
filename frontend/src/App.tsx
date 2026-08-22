@@ -362,8 +362,6 @@ export function App() {
   // "all" is the full palette (Mod+K); "objects" scopes it to the connection's
   // tables/views (Mod+P), for a quick go-to-object jump.
   const [paletteMode, setPaletteMode] = createSignal<"all" | "objects" | "snippets">("all");
-  /** The icon-only tool strip under the tabs, folded away by default (#386). */
-  const [toolsOpen, setToolsOpen] = createSignal(false);
   const [loadedObjects, setLoadedObjects] = createSignal<TreeNode[]>([]);
 
   // Bumped by Ctrl/Cmd+F to open the SQL editor's find panel (see SqlEditor).
@@ -2397,16 +2395,16 @@ export function App() {
             <span class="tabbar-spacer" />
             <button
               class="tab-tools"
-              aria-expanded={toolsOpen()}
+              aria-expanded={settings().toolStrip}
               title={t("toolbar.tools")}
               aria-label={t("toolbar.tools")}
-              onClick={() => setToolsOpen((v) => !v)}
+              onClick={() => patchSettings({ toolStrip: !settings().toolStrip })}
             >
               ⋯
             </button>
           </div>
 
-          <Show when={toolsOpen()}>
+          <Show when={settings().toolStrip}>
             <div class="toolstrip" role="toolbar" aria-label={t("toolbar.actions")}>
               <For each={TOOL_CATALOG}>
                 {(item) => (

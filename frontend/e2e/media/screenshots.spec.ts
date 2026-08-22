@@ -131,17 +131,11 @@ test("capture the published screenshots", async ({ page }) => {
       ["Monitor de servidor", "screenshot-monitor.png", /sesi[óo]n\(es\)/i],
       ["Usuarios y permisos", "screenshot-users.png", /usuario\(s\)/i],
     ];
-    // The tools live behind the ⋯ strip now (#386), which is folded at rest —
-    // and folded again before each shot, so the images keep the same baseline
-    // chrome the app opens with.
-    const toolStrip = page.getByRole("button", { name: "Barra de herramientas", exact: true });
     for (const [button, file, ready] of tools) {
-      await toolStrip.click();
       await page
         .getByRole("toolbar", { name: "Acciones" })
         .getByRole("button", { name: button, exact: true })
         .click();
-      await toolStrip.click();
       await expect(page.getByText(ready).first()).toBeVisible({ timeout: 30_000 });
       await shot(file);
       // Escape, not a "Cerrar" button: the panels stopped printing one when the

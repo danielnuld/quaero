@@ -24,7 +24,7 @@ const TOOLS = [
 ];
 
 describeEngine("sqlite", () => {
-  test("the strip is folded until asked, then every tool has a name and an icon", async ({
+  test("every tool in the strip has a name and an icon, and ⋯ folds it away", async ({
     app,
   }) => {
     const { page } = app;
@@ -32,10 +32,7 @@ describeEngine("sqlite", () => {
     await connect(app);
 
     const strip = page.getByRole("toolbar", { name: "Acciones" });
-    // Folded at rest: that is the whole point of the band being 32 px.
-    await expect(strip).toBeHidden();
-
-    await page.getByRole("button", { name: "Barra de herramientas", exact: true }).click();
+    // Shown by default: it is how someone finds out these nine exist at all.
     await expect(strip).toBeVisible();
 
     for (const name of TOOLS) {
@@ -51,6 +48,10 @@ describeEngine("sqlite", () => {
 
     // No stragglers: if a tool is added, this test should have to say so.
     await expect(strip.getByRole("button")).toHaveCount(TOOLS.length);
+
+    // And it folds away for anyone who wants the 40 px back.
+    await page.getByRole("button", { name: "Barra de herramientas", exact: true }).click();
+    await expect(strip).toBeHidden();
   });
 
   test("Snippets opens its panel from the strip", async ({ app }) => {
@@ -58,7 +59,6 @@ describeEngine("sqlite", () => {
     await app.open();
     await connect(app);
 
-    await page.getByRole("button", { name: "Barra de herramientas", exact: true }).click();
     await page
       .getByRole("toolbar", { name: "Acciones" })
       .getByRole("button", { name: "Snippets", exact: true })
@@ -115,7 +115,6 @@ describeEngine("sqlite", () => {
     const { page } = app;
     await app.open();
 
-    await page.getByRole("button", { name: "Barra de herramientas", exact: true }).click();
     const strip = page.getByRole("toolbar", { name: "Acciones" });
     for (const name of TOOLS) {
       await expect(

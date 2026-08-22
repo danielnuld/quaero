@@ -99,7 +99,6 @@ describeEngine("sqlite", () => {
     // one test that walks in through the front door.
     await connect(app);
 
-    await page.getByRole("button", { name: "Barra de herramientas", exact: true }).click();
     await page
       .getByRole("toolbar", { name: "Acciones" })
       .getByRole("button", { name: "Snippets", exact: true })
