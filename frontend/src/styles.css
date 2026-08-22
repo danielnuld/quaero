@@ -2665,6 +2665,14 @@ button.primary:hover:not(:disabled) {
   min-height: var(--band-md);
 }
 
+/* Divider between the object's actions and the tab's own, inside one bar. */
+.toolbar-sep {
+  width: 1px;
+  height: var(--fs-lg);
+  background: var(--border);
+  flex-shrink: 0;
+}
+
 .edit-btn {
   /* The base look comes from the shared button rule above. */
   font-family: inherit;

@@ -2497,11 +2497,12 @@ export function App() {
                     defaultTable={sqlDefaultTable()}
                   />
                   </Show>
+                  {/* The editor's own bar. A data tab has no editor: its
+                      Plan/Historial/Snippets buttons used to render here anyway,
+                      as a 29 px band of three items above the action bar, and
+                      they now ride inside that bar instead (issue #386). */}
+                  <Show when={!isDataTab(tab().id)}>
                   <div class="editor-hint">
-                    {/* Without an editor below, three of these lose their object:
-                        running IS applying, there is no text to format, and
-                        saving a snippet resolves the editor's own selection. */}
-                    <Show when={!isDataTab(tab().id)}>
                     <button
                       class="status-btn run-btn"
                       title={
@@ -2520,7 +2521,6 @@ export function App() {
                     >
                       {t("editor.format")}
                     </button>
-                    </Show>
                     <button
                       class="status-btn"
                       title={t("editor.planTitle")}
@@ -2535,15 +2535,13 @@ export function App() {
                     >
                       {t("editor.history")}
                     </button>
-                    <Show when={!isDataTab(tab().id)}>
-                      <button
-                        class="status-btn"
-                        title={t("editor.saveSnippetTitle")}
-                        onClick={requestSaveSnippet}
-                      >
-                        {t("editor.saveSnippet")}
-                      </button>
-                    </Show>
+                    <button
+                      class="status-btn"
+                      title={t("editor.saveSnippetTitle")}
+                      onClick={requestSaveSnippet}
+                    >
+                      {t("editor.saveSnippet")}
+                    </button>
                     <button
                       class="status-btn"
                       title={t("editor.snippetsTitle")}
@@ -2565,10 +2563,7 @@ export function App() {
                       fallback={
                         <>
                           <span class="editor-hint-spacer" />
-                          {/* No editor, nothing to run with Ctrl+Enter. */}
-                          <Show when={!isDataTab(tab().id)}>
-                            <span>{t("editor.runHint")}</span>
-                          </Show>
+                          <span>{t("editor.runHint")}</span>
                         </>
                       }
                     >
@@ -2603,6 +2598,7 @@ export function App() {
                       )}
                     </Show>
                   </div>
+                  </Show>
                 </div>
                 <div class="result-pane">
                   <Show
@@ -2634,7 +2630,31 @@ export function App() {
                       onDiscard={discardEdit}
                       onChart={openChart}
                       onExport={(fmt) => doExport(fmt as AnyExportFormat)}
-                    />
+                    >
+                      {/* A data tab has no editor bar to hold these, so they
+                          ride in the action bar rather than in a band of their
+                          own above it (issue #386). */}
+                      <Show when={isDataTab(tab().id)}>
+                        <span class="toolbar-sep" aria-hidden="true" />
+                        <button class="edit-btn" title={t("editor.planTitle")} onClick={explainActive}>
+                          {t("editor.plan")}
+                        </button>
+                        <button
+                          class="edit-btn"
+                          title={t("editor.historyTitle")}
+                          onClick={() => showTool("history", t("editor.history"), { key: "history" })}
+                        >
+                          {t("editor.history")}
+                        </button>
+                        <button
+                          class="edit-btn"
+                          title={t("editor.snippetsTitle")}
+                          onClick={() => showTool("snippets", t("editor.snippets"), { key: "snippets" })}
+                        >
+                          {t("editor.snippets")}
+                        </button>
+                      </Show>
+                    </ObjectToolbar>
                   </Show>
                   <Show when={currentEdit().preview}>
                     {(sqls) => (

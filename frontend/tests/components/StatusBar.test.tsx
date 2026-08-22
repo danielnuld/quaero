@@ -27,12 +27,14 @@ const base = {
   onShowSettings: () => {},
 };
 
-function mount(over: Record<string, unknown> = {}) {
+type Props = Parameters<typeof StatusBar>[0];
+
+function mount(over: Partial<Props> = {}) {
   host = document.createElement("div");
   document.body.appendChild(host);
   createRoot((d) => {
     dispose = d;
-    render(() => <StatusBar {...base} {...(over as never)} />, host!);
+    render(() => <StatusBar {...base} {...over} />, host!);
   });
   return host;
 }
