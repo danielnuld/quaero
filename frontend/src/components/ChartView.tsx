@@ -126,7 +126,7 @@ export function ChartView(props: { result: ResultSet; onClose: () => void }) {
 
       <Show
         when={hasData()}
-        fallback={<p class="grid-empty">{t("chart.pickHint")}</p>}
+        fallback={<p class="grid-empty pane-empty">{t("chart.pickHint")}</p>}
       >
         <div class="chart-canvas">
           <svg viewBox={`0 0 ${W} ${H}`} class="chart-svg" role="img" aria-label={t("chart.aria", { type: t(`chart.${type()}`) })}>

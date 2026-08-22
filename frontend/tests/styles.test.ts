@@ -44,6 +44,7 @@ describe("styles.css scales", () => {
       "--h-micro", "--h-sm", "--h-md",
       "--band-sm", "--band-md", "--band-lg",
       "--shadow-sm", "--shadow-lg", "--focus-ring",
+      "--motion-fast",
     ]) {
       expect(CSS, `${token} is not defined`).toContain(`  ${token}:`);
     }
@@ -138,5 +139,23 @@ describe("styles.css keyboard focus", () => {
 
   it("draws a ring on :focus-visible", () => {
     expect(CSS).toMatch(/:focus-visible \{\s+outline: 2px solid var\(--accent\);/);
+  });
+});
+
+// Issue #386: the app had exactly one transition in 105 KB of CSS, which reads
+// as an oversight rather than as the decision it is. The decision — chrome does
+// not animate — only holds if it stays written down and the exceptions go
+// through the token.
+describe("motion", () => {
+  it("times every transition from the motion token", () => {
+    const durations = Array.from(
+      stripComments(RULES).matchAll(/transition(?:-duration)?:\s*([^;{}]+);/g),
+      (m) => m[1].trim(),
+    ).filter((v) => !v.includes("var(--motion-") && !v.includes("0.01ms"));
+    expect(durations).toEqual([]);
+  });
+
+  it("honours prefers-reduced-motion", () => {
+    expect(CSS).toContain("@media (prefers-reduced-motion: reduce)");
   });
 });

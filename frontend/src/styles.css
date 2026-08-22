@@ -157,6 +157,15 @@
   --band-md: 32px;
   --band-lg: 40px;
 
+  /* Movimiento (issue #386). La app tenía UNA transición en 105 KB de CSS, y
+     una sola es indistinguible de un descuido. La decisión, escrita: esto es una
+     herramienta, no una presentación — **el cromo no se anima**. El hover, la
+     selección, abrir un panel y cambiar de pestaña son instantáneos, porque una
+     espera de 200 ms repetida cien veces al día es tiempo del usuario.
+     Lo único que se desvanece es lo que aparece y desaparece por sí solo, para
+     que no dé un salto: ahí va este token y ningún otro. */
+  --motion-fast: 90ms;
+
   /* Per-object-type identity colours (design proposal).
      Distinct, vivid hues — the single strongest "this is a database tool"
      recognition signal. Shared across the tree, object lists and tabs. Dark
@@ -193,6 +202,20 @@
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Nobody who asked the system for less motion should have to argue with a
+   stylesheet about it. Cheap here because there is almost nothing to switch
+   off — which is the point of the rule above. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* --- One control vocabulary (issue #386) ---------------------------------
@@ -945,7 +968,7 @@ body {
    tabs reads calmly (chrome visual pass). */
 .tab .tab-close {
   opacity: 0.45;
-  transition: opacity 0.1s;
+  transition: opacity var(--motion-fast);
 }
 
 .tab:hover .tab-close,
@@ -1391,6 +1414,24 @@ body {
 .grid-error {
   padding: var(--sp-4);
   color: var(--text-dim);
+}
+
+/* An empty state that IS the pane, rather than a note inside one (issue #386).
+   "Selecciona un usuario para ver sus permisos." was a plain line of text stuck
+   to the top-left corner of a 600 px area; it takes the room the pane gives it
+   and centres in it. `:only-child` catches the panes that hand it the whole
+   area, `.pane-empty` says so where it has a toolbar above it but is still all
+   the content there is. A note WITH siblings keeps sitting where it is written:
+   "solo se cargaron los primeros N" belongs next to what it qualifies. */
+.grid-empty:only-child,
+.grid-empty.pane-empty {
+  flex: 1;
+  min-height: 100%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  padding: var(--sp-6);
 }
 
 /* Running state: "Ejecutando…" with a Cancelar button beside it (cancelable
@@ -1971,9 +2012,15 @@ kbd {
   font-family: var(--font-mono);
 }
 
+/* Buttons end together at the right, the way a dialog footer reads (issue
+   #386). Wherever a panel deliberately splits them into two groups it puts a
+   flex:1 spacer between, and a spacer eats the free room before this can — so
+   this changes nothing there and everything in a full-width tool pane, where
+   the two buttons used to sit a thousand pixels apart. */
 .modal-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--sp-3);
   margin-top: var(--sp-5);
 }
@@ -3941,10 +3988,14 @@ button.grid-action.danger:hover:not(:disabled) {
   margin: var(--sp-3) 0;
 }
 
+/* Packed, not gridded (issue #386): fixed 10rem tracks meant a wide pane laid
+   out six columns and left the seventh column of the table — `alta` — alone on
+   a row of its own, five empty cells beside it. Checkbox labels are short and
+   uneven; letting them pack keeps the leftovers on the same line. */
 .qb-cols {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: var(--sp-2) var(--sp-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-5);
   margin-top: var(--sp-2);
 }
 
