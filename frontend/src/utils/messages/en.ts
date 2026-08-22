@@ -52,6 +52,9 @@ export const en: Record<string, string> = {
 
   // top action ribbon
   "toolbar.actions": "Actions",
+  "toolbar.launch": "Search or run",
+  "toolbar.launchTitle": "Search objects, tools and actions",
+  "toolbar.tools": "Tools",
   "toolbar.newQuery.label": "Query",
   "toolbar.newQuery.title": "New query",
   "toolbar.newTable.label": "Table",

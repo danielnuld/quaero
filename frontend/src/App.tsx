@@ -58,7 +58,6 @@ import {
   dsnForDatabaseList,
   nextConnectionId,
   upsertConnection,
-  connIcon,
   connectionGroups,
   setConnectionGroup,
   removeConnection,
@@ -157,6 +156,7 @@ import { SlowQueries } from "./components/SlowQueries";
 import { ExplainPlan } from "./components/ExplainPlan";
 import { UpdateModal } from "./components/UpdateModal";
 import { TOOL_CATALOG } from "./utils/toolCatalog";
+import { IconSearch } from "./components/icons";
 import { t } from "./utils/i18n";
 import { APP_VERSION } from "./utils/version";
 import {
@@ -168,7 +168,6 @@ import {
 import { openExternal } from "./utils/openExternal";
 import { canInstall, installUpdate } from "./utils/installUpdate";
 import { ConnectionBar } from "./components/ConnectionBar";
-import { AppToolbar } from "./components/AppToolbar";
 import { ObjectToolbar } from "./components/ObjectToolbar";
 import { ObjectListView } from "./components/ObjectListView";
 import { InfoPane } from "./components/InfoPane";
@@ -363,6 +362,8 @@ export function App() {
   // "all" is the full palette (Mod+K); "objects" scopes it to the connection's
   // tables/views (Mod+P), for a quick go-to-object jump.
   const [paletteMode, setPaletteMode] = createSignal<"all" | "objects" | "snippets">("all");
+  /** The icon-only tool strip under the tabs, folded away by default (#386). */
+  const [toolsOpen, setToolsOpen] = createSignal(false);
   const [loadedObjects, setLoadedObjects] = createSignal<TreeNode[]>([]);
 
   // Bumped by Ctrl/Cmd+F to open the SQL editor's find panel (see SqlEditor).
@@ -2172,6 +2173,13 @@ export function App() {
     out.push({ id: "act:new", category: "action", label: t("toolbar.newQuery.title"), run: () => setTabs((s) => addTab(s, t("toolbar.newQuery.label"), focusedDefId() ?? undefined)) });
     if (connected)
       out.push({ id: "act:reconnect", category: "action", label: t("conn.reconnect"), run: reconnect });
+    // The ribbon used to own these two; without it the palette is where they
+    // live (issue #386). New table needs a connection, the object list a
+    // working database, exactly as the ribbon's disabled states said.
+    if (connected)
+      out.push({ id: "act:newTable", category: "action", label: t("toolbar.newTable.title"), run: () => openTableDesigner() });
+    if (connected && activeDb())
+      out.push({ id: "act:objects", category: "action", label: t("toolbar.objects.title"), run: () => showTool("objectList", t("tab.objectList", { db: activeDb()! }), { key: `objlist:${activeDb()}`, params: { db: activeDb()! } }) });
     out.push({ id: "act:settings", category: "action", label: t("common.settings"), run: () => showTool("settings", t("common.settings"), { key: "settings" }) });
     out.push({ id: "act:help", category: "action", label: t("status.shortcuts"), run: () => showTool("help", t("status.shortcuts"), { key: "help" }) });
 
@@ -2224,17 +2232,6 @@ export function App() {
 
   return (
     <div class="app">
-      <AppToolbar
-        active={!!active()}
-        hasDb={!!activeDb()}
-        onNewQuery={newTab}
-        onNewTable={() => openTableDesigner()}
-        onObjectList={() => {
-          const db = activeDb();
-          if (db) showTool("objectList", t("tab.objectList", { db }), { key: `objlist:${db}`, params: { db } });
-        }}
-        onOpenTool={(tool) => showTool(tool.tool, t(tool.tabTitle), { key: tool.key })}
-      />
       <div class="main">
         <aside class="sidebar" style={{ width: `${sidebarWidth()}px` }}>
           <div class="sidebar-section-title">{t("conn.title")}</div>
@@ -2311,66 +2308,121 @@ export function App() {
               title="Conexión de la pestaña activa"
             />
           </Show>
-          {/* A real tablist (issue #338): these were bare divs, so nothing but
+          {/* One navigation band instead of two (issue #386). The ribbon of 12
+              destinations above these tabs opened exactly what the tabs then
+              showed, and gave a tool the same weight as a table. What replaced
+              it is the launcher on the left — the Ctrl+K palette, which already
+              indexes every tool, object, snippet and action — plus an icon-only
+              strip that ⋯ unfolds for the times you would rather point at a
+              tool than name it. 68 px of chrome become 32.
+
+              A real tablist (issue #338): these were bare divs, so nothing but
               sight could tell which tab was selected — and "one tab per snippet"
               is a promise about exactly that. aria-label pins the accessible name
               to the title, which the close button's × and the connection name
               would otherwise pad. */}
-          <div class="tabbar" role="tablist" aria-label={t("tab.listLabel")}>
-            <For each={tabs().tabs}>
-              {(tab) => (
-                <div
-                  class={`tab ${tab.id === tabs().activeId ? "active" : ""} ${
-                    tab.kind === "tool" ? "tab-tool" : ""
-                  }`}
-                  role="tab"
-                  aria-selected={tab.id === tabs().activeId}
-                  aria-label={
-                    isUnsaved(tab) ? t("tab.unsaved", { title: tab.title }) : tab.title
-                  }
-                  tabindex={tab.id === tabs().activeId ? 0 : -1}
-                  style={tabColor(tab) ? { "border-top": `2px solid ${tabColor(tab)}` } : undefined}
-                  onClick={() => selectTab(tab.id)}
-                  onKeyDown={(e) => onTabKeyDown(e, tab.id)}
-                  onContextMenu={(e) => tabMenu(e, tab.id)}
-                >
-                  <Show when={tabColor(tab)}>
-                    <span class="conn-color tab-conn-color" style={{ background: tabColor(tab) }} />
-                  </Show>
-                  <span class="tab-title">{tab.title}</span>
-                  <Show when={isUnsaved(tab)}>
-                    <span class="tab-unsaved" aria-hidden="true">
-                      •
-                    </span>
-                  </Show>
-                  <Show when={tabConn(tab)}>
-                    {(conn) => (
-                      <span class="tab-conn">
-                        {connIcon(connections().find((c) => c.id === conn().defId) ?? conn())} (
-                        {conn().name})
-                      </span>
-                    )}
-                  </Show>
-                  <button
-                    class="tab-close"
-                    title="Cerrar pestaña"
-                    aria-label="Cerrar pestaña"
-                    onClick={(e) => removeTab(tab.id, e)}
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </For>
+          <div class="tabbar">
             <button
-              class="tab-new"
-              title="Nueva consulta"
-              aria-label="Nueva consulta"
-              onClick={newTab}
+              class="tab-launch"
+              title={`${t("toolbar.launchTitle")} (${isMac() ? "⌘K" : "Ctrl+K"})`}
+              onClick={() => {
+                setPaletteMode("all");
+                setPaletteOpen(true);
+              }}
             >
-              +
+              <span class="tab-launch-ic" aria-hidden="true">
+                <IconSearch />
+              </span>
+              <span class="tab-launch-lb">{t("toolbar.launch")}</span>
+              <kbd class="tab-kbd">{isMac() ? "⌘K" : "Ctrl K"}</kbd>
+            </button>
+            <span class="tab-sep" aria-hidden="true" />
+            <div class="tablist" role="tablist" aria-label={t("tab.listLabel")}>
+              <For each={tabs().tabs}>
+                {(tab) => (
+                  <div
+                    class={`tab ${tab.id === tabs().activeId ? "active" : ""} ${
+                      tab.kind === "tool" ? "tab-tool" : ""
+                    }`}
+                    role="tab"
+                    aria-selected={tab.id === tabs().activeId}
+                    aria-label={
+                      isUnsaved(tab) ? t("tab.unsaved", { title: tab.title }) : tab.title
+                    }
+                    /* The connection used to be spelled out on every tab —
+                       "clientes 🐬 (Ventas (demo))", nested parentheses and all,
+                       repeated even when only one connection was open. The colour
+                       on the edge and the dot say it without spending the width;
+                       the name stays a hover away, and in the status bar. */
+                    title={
+                      tabConn(tab) ? `${tab.title} — ${tabConn(tab)!.name}` : tab.title
+                    }
+                    tabindex={tab.id === tabs().activeId ? 0 : -1}
+                    style={
+                      tabColor(tab) ? { "border-left-color": tabColor(tab)! } : undefined
+                    }
+                    onClick={() => selectTab(tab.id)}
+                    onKeyDown={(e) => onTabKeyDown(e, tab.id)}
+                    onContextMenu={(e) => tabMenu(e, tab.id)}
+                  >
+                    <Show when={tabColor(tab)}>
+                      <span class="conn-color tab-conn-color" style={{ background: tabColor(tab) }} />
+                    </Show>
+                    <span class="tab-title">{tab.title}</span>
+                    <Show when={isUnsaved(tab)}>
+                      <span class="tab-unsaved" aria-hidden="true">
+                        •
+                      </span>
+                    </Show>
+                    <button
+                      class="tab-close"
+                      title="Cerrar pestaña"
+                      aria-label="Cerrar pestaña"
+                      onClick={(e) => removeTab(tab.id, e)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+              </For>
+              <button
+                class="tab-new"
+                title="Nueva consulta"
+                aria-label="Nueva consulta"
+                onClick={newTab}
+              >
+                +
+              </button>
+            </div>
+            <span class="tabbar-spacer" />
+            <button
+              class="tab-tools"
+              aria-expanded={toolsOpen()}
+              title={t("toolbar.tools")}
+              aria-label={t("toolbar.tools")}
+              onClick={() => setToolsOpen((v) => !v)}
+            >
+              ⋯
             </button>
           </div>
+
+          <Show when={toolsOpen()}>
+            <div class="toolstrip" role="toolbar" aria-label={t("toolbar.actions")}>
+              <For each={TOOL_CATALOG}>
+                {(item) => (
+                  <button
+                    class="toolstrip-btn"
+                    title={t(item.title)}
+                    aria-label={t(item.label)}
+                    disabled={!active()}
+                    onClick={() => showTool(item.tool, t(item.tabTitle), { key: item.key })}
+                  >
+                    <item.Icon />
+                  </button>
+                )}
+              </For>
+            </div>
+          </Show>
 
           <div class="workspace-main">
           <Show when={currentQuery()}>

@@ -38,6 +38,33 @@ describe("App shell", () => {
   });
 });
 
+// The navigation band (issue #386): the ribbon of 12 destinations is gone, and
+// what replaced it has to actually reach the same places.
+describe("App — one navigation band", () => {
+  it("has no ribbon; the launcher opens the palette and ⋯ unfolds the tools", () => {
+    mount();
+    expect(host!.querySelector(".apptoolbar")).toBeNull();
+
+    const launch = host!.querySelector(".tab-launch") as HTMLButtonElement;
+    expect(launch).not.toBeNull();
+    launch.click();
+    expect(host!.querySelector(".cmdk")).not.toBeNull();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+
+    const tools = host!.querySelector(".tab-tools") as HTMLButtonElement;
+    expect(host!.querySelector(".toolstrip")).toBeNull();
+    tools.click();
+    expect(host!.querySelectorAll(".toolstrip-btn").length).toBe(9);
+    tools.click();
+    expect(host!.querySelector(".toolstrip")).toBeNull();
+  });
+
+  it("does not spell the connection out on the tab", () => {
+    mount();
+    expect(host!.querySelector(".tab-conn")).toBeNull();
+  });
+});
+
 // UX polish (issue #42): theme toggle, shortcuts, help overlay.
 describe("App — theme & shortcuts", () => {
   it("stamps a resolved theme on the document root at mount", () => {

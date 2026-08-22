@@ -55,6 +55,9 @@ export const es: Record<string, string> = {
 
   // top action ribbon
   "toolbar.actions": "Acciones",
+  "toolbar.launch": "Buscar o ejecutar",
+  "toolbar.launchTitle": "Buscar objetos, herramientas y acciones",
+  "toolbar.tools": "Herramientas",
   "toolbar.newQuery.label": "Consulta",
   "toolbar.newQuery.title": "Nueva consulta",
   "toolbar.newTable.label": "Tabla",

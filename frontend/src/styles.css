@@ -324,82 +324,68 @@ body {
   min-height: 0;
 }
 
-/* Top action ribbon (design proposal, phase 2). Full-width bar of icon+label
-   buttons above the sidebar+workspace split. */
-.apptoolbar {
+/* The tool strip the ⋯ button unfolds (issue #386): the same nine tools the
+   ribbon showed, at icon size, for pointing instead of naming. Folded away by
+   default — the launcher and Ctrl+K reach all of them without it. */
+.toolstrip {
   display: flex;
-  align-items: stretch;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
+  align-items: center;
+  gap: var(--sp-1);
+  height: var(--band-lg);
+  padding: 0 var(--sp-3);
   background: var(--bg-elev);
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
   flex-shrink: 0;
+  overflow-x: auto;
 }
-.att-group {
-  display: flex;
-  gap: var(--sp-1);
-  padding-right: var(--sp-3);
-  margin-right: var(--sp-2);
-  border-right: 1px solid var(--border);
-}
-.att-group:last-child {
-  border-right: 0;
-  margin-right: 0;
-  padding-right: 0;
-}
-.att-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--sp-2);
-  min-width: 58px;
-  padding: var(--sp-2) var(--sp-3) var(--sp-2);
+
+.toolstrip-btn {
+  display: grid;
+  place-items: center;
+  width: var(--band-md);
+  height: var(--h-md);
   border: 0;
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: transparent;
-  color: var(--text);
+  color: var(--text-dim);
   cursor: pointer;
-  font: inherit;
 }
-.att-btn:hover:not(:disabled) {
+
+.toolstrip-btn svg {
+  width: var(--fs-lg);
+  height: var(--fs-lg);
+  display: block;
+}
+
+.toolstrip-btn:hover:not(:disabled) {
   background: var(--bg-elev2);
+  color: var(--text);
 }
-.att-btn:disabled {
+
+.toolstrip-btn:disabled {
   opacity: 0.4;
   cursor: default;
 }
-.att-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-/* Monochrome tiles: no coloured plate, so the accent is spent on state instead of
-   on eleven buttons competing at rest. The icon inherits `color`, which is what
-   makes hover/focus able to move it at all — the emoji this replaced painted
-   themselves and ignored the colour they were given. */
-.att-ic {
-  width: 28px;
-  height: var(--h-md);
-  border-radius: var(--r-md);
+
+/* The ⋯ that folds the strip in and out. */
+.tab-tools {
   display: grid;
   place-items: center;
+  width: var(--h-sm);
+  height: var(--h-sm);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
   color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-md);
+  cursor: pointer;
+  flex-shrink: 0;
 }
-.att-ic svg {
-  width: 17px;
-  height: 17px;
-  display: block;
-}
-.att-btn:hover:not(:disabled) .att-ic,
-.att-btn:focus-visible .att-ic {
-  color: var(--accent);
-}
-.att-lb {
-  font-size: var(--fs-sm);
-  color: var(--text-dim);
-  white-space: nowrap;
-}
-.att-btn:hover:not(:disabled) .att-lb {
+
+.tab-tools:hover,
+.tab-tools[aria-expanded="true"] {
+  background: var(--bg-elev2);
   color: var(--text);
 }
 
@@ -732,10 +718,11 @@ body {
   padding: var(--sp-3);
 }
 
-/* The connection-color dot shown on a query tab. */
+/* The connection-color dot shown on a query tab. Since the tab lost the
+   spelled-out "(Ventas (demo))" suffix, this dot and the coloured left edge are
+   what say which server the tab is on (issue #386). */
 .tab-conn-color {
-  margin-right: var(--sp-3);
-  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 /* Full-width strip at the top of the workspace in the active tab's connection
@@ -919,23 +906,98 @@ body {
   min-height: 0;
 }
 
+/* The one navigation band (issue #386): launcher, tabs, tool strip toggle. A
+   32px band where the ribbon (68) plus the tab bar (31) used to be. */
 .tabbar {
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--band-md);
+  padding: 0 var(--sp-3);
   background: var(--bg-elev);
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* The Ctrl+K palette, given a door. It is the whole replacement for twelve
+   ribbon buttons, so it has to look like something you can click, not like a
+   hint printed on the chrome. */
+.tab-launch {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--h-sm);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tab-launch:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.tab-launch-ic {
+  display: grid;
+  place-items: center;
+  width: var(--fs-base);
+  height: var(--fs-base);
+}
+
+.tab-launch-ic svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.tab-kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-sm);
+  background: var(--bg-elev2);
+  color: var(--text-dim);
+}
+
+.tab-sep {
+  width: 1px;
+  height: var(--fs-lg);
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.tablist {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
   overflow-x: auto;
+}
+
+.tabbar-spacer {
+  flex: 1;
 }
 
 .tab {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4);
-  border-right: 1px solid var(--border);
+  height: var(--h-sm);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-sm);
+  /* The connection's colour rides this edge (set inline). Reserved on every
+     tab so a tab does not shift sideways when it gains one. */
+  border-left: 3px solid transparent;
   cursor: pointer;
   white-space: nowrap;
   color: var(--text-dim);
+  flex-shrink: 0;
 }
 
 .tab:hover:not(.active) {
@@ -944,12 +1006,15 @@ body {
 }
 
 .tab.active {
-  background: var(--bg);
+  background: var(--bg-elev2);
   color: var(--text);
-  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .tab.active .tab-title {
+  font-weight: 600;
+}
+
+.tab-title {
   font-weight: 600;
 }
 
@@ -966,15 +1031,6 @@ body {
   color: var(--null);
   font-size: var(--fs-md);
   line-height: 0;
-}
-
-/* The tab's connection name, dimmed so the title still reads first. */
-.tab-conn {
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-dim);
-  font-size: var(--fs-sm);
 }
 
 .tab-close,
