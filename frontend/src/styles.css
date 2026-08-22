@@ -5074,8 +5074,15 @@ button.grid-action.danger:hover:not(:disabled) {
   border-bottom: 1px solid var(--border);
   font-size: var(--fs-base);
   overflow-y: auto;
-  flex: 1 1 auto;
+  /* Takes what it needs and no more. Open it grows into the pane's 60 % cap;
+     folded it is exactly its 28 px head (issue #386) — it used to claim
+     `flex: 1 1 auto` and 172 px of that whether or not it had anything to say. */
+  flex: 0 1 auto;
   min-height: 0;
+}
+
+.filterbar.folded {
+  overflow: visible;
 }
 
 /* Sticky inside the panel's own scroller: with several conditions the panel
@@ -5088,9 +5095,16 @@ button.grid-action.danger:hover:not(:disabled) {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-3);
+  height: var(--band-sm);
+  padding: 0 var(--sp-3);
   background: var(--bg-elev);
   border-bottom: 1px solid var(--border);
+}
+
+/* No border under the head when nothing follows it: folded, the panel's own
+   bottom border is already there and two hairlines read as a dead band. */
+.filterbar.folded .filterbar-head {
+  border-bottom: 0;
 }
 
 .filterbar-toggle {
@@ -5107,7 +5121,12 @@ button.grid-action.danger:hover:not(:disabled) {
 }
 
 .filterbar-chev { color: var(--text-dim); font-size: var(--fs-micro); }
-.filterbar-summary { color: var(--accent-text); font-size: var(--fs-sm); }
+.filterbar-sep { color: var(--text-dim); }
+/* Dim while the draft is just a draft; the accent is spent only once the grid
+   is actually showing a filtered set. */
+.filterbar-summary { color: var(--text-dim); font-size: var(--fs-sm); }
+.filterbar-summary.on { color: var(--accent-text); }
+.filterbar-dirty { color: var(--null); font-size: var(--fs-sm); }
 .filterbar-spacer { flex: 1; }
 
 .filter-body { padding: var(--sp-2) var(--sp-3) var(--sp-3); }
@@ -5184,5 +5203,4 @@ button.grid-action.danger:hover:not(:disabled) {
 }
 
 .filter-empty { color: var(--text-dim); margin: var(--sp-2) 0; }
-.filter-state { color: var(--null); }
 .filter-count { color: var(--text-dim); margin-left: auto; font-variant-numeric: tabular-nums; }
