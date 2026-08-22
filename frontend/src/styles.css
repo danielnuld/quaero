@@ -188,6 +188,74 @@
   outline-offset: 2px;
 }
 
+/* --- One control vocabulary (issue #386) ---------------------------------
+   Twelve classes implemented "text field" and nine implemented "button", each
+   behind its own panel prefix, so the same control looked different depending
+   on which panel you opened it from. The look is defined once, here; those
+   classes stay as the place for what is genuinely particular to each — a
+   width, a position, a modifier — and never for the base look again. */
+
+.cell-input,
+.grid-filter-input,
+.objtree-filter-input,
+.rd-input,
+.snip-save-input,
+.td-in,
+.field input,
+.field select,
+.field textarea {
+  background-color: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+  font-family: inherit;
+  font-size: var(--fs-base);
+}
+
+/* Native controls kept the operating system's own look: of 26 <select>s only
+   one drew its own caret, and 11 checkboxes rendered in the OS blue beside an
+   indigo accent. `accent-color` is the whole fix for the checkboxes. */
+.conn-io-btn,
+.edit-btn,
+.panel-icon-btn,
+.rd-nav-btn {
+  background-color: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+  font-family: inherit;
+  font-size: var(--fs-base);
+  cursor: pointer;
+}
+
+/* A square icon button is one control height wide as well as tall. Only
+   `.panel-icon-btn`: `.status-btn` is the app's plain text button despite the
+   name — "+ condición", "Plan", "SQL" — and squaring it truncates the label. */
+.panel-icon-btn {
+  width: var(--h-sm);
+  min-width: var(--h-sm);
+  padding: 0;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+/* The caret is a neutral grey that reads on both palettes: a data: URI cannot
+   inherit currentColor, and one grey beats encoding two SVGs. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: var(--sp-6);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 3.5 L5 6.5 L8 3.5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--sp-3) center;
+  background-size: 10px;
+}
+
 /* Themed, always-visible scrollbars. WebView2/Chromium renders overlay
    scrollbars that stay hidden until you actively scroll, so a scrollable region
    (the object tree, the result grid) gave no visual cue it had more content —
@@ -508,7 +576,7 @@ body {
   font-size: var(--fs-micro);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--faint, var(--text-dim));
+  color: var(--text-dim);
 }
 .infopane-v {
   font-size: var(--fs-md);
@@ -1254,8 +1322,8 @@ body {
 }
 
 .grid-cell {
-  height: var(--grid-row-h, 28px);
-  line-height: var(--grid-row-h, 28px);
+  height: var(--grid-row-h, var(--h-md));
+  line-height: var(--grid-row-h, var(--h-md));
   padding: 0 var(--sp-3);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1375,7 +1443,7 @@ body {
   padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-base);
   color: var(--text);
-  background: var(--surface-2, transparent);
+  background: var(--bg-elev2);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   cursor: pointer;
@@ -1524,7 +1592,7 @@ body {
   font-size: var(--fs-md);
   /* Larger, squared hit target for the glyph buttons (theme/settings/help) —
      the old 0.3rem-wide targets were fiddly (UX audit). */
-  min-width: 26px;
+  min-width: var(--h-sm);
   height: var(--h-sm);
   display: inline-flex;
   align-items: center;
@@ -1854,7 +1922,7 @@ kbd {
 
 .field input,
 .field select {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
@@ -2300,12 +2368,6 @@ button.primary:hover:not(:disabled) {
 .objtree-filter-input {
   flex: 1;
   min-width: 0;
-  padding: var(--sp-2) var(--sp-3);
-  font-size: var(--fs-base);
-  color: var(--text);
-  background: var(--bg-elev2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
 }
 
 .objtree-filter-input:focus {
@@ -2614,19 +2676,13 @@ button.primary:hover:not(:disabled) {
   gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-3);
   border-bottom: 1px solid var(--border);
-  background: var(--bg-alt, var(--bg));
+  background: var(--bg-alt);
   min-height: var(--band-md);
 }
 
 .edit-btn {
-  font: inherit;
-  font-size: var(--fs-base);
-  padding: var(--sp-2) var(--sp-3);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  background: var(--bg);
-  color: var(--fg);
-  cursor: pointer;
+  /* The base look comes from the shared button rule above. */
+  font-family: inherit;
 }
 
 .edit-btn:hover:not(:disabled) {
@@ -2686,7 +2742,7 @@ button.primary:hover:not(:disabled) {
 
 .cell-input:focus {
   border-color: var(--accent);
-  background: var(--bg-alt, var(--bg));
+  background: var(--bg-alt);
 }
 
 .cell-input:disabled {
@@ -2739,7 +2795,7 @@ button.primary:hover:not(:disabled) {
 }
 
 .fk-toggle:hover:not(:disabled) {
-  background: var(--bg-alt, rgba(127, 127, 127, 0.12));
+  background: var(--bg-alt);
 }
 
 .fk-toggle:disabled {
@@ -2773,7 +2829,7 @@ button.primary:hover:not(:disabled) {
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--bg);
-  color: var(--text, var(--fg));
+  color: var(--text);
   font: inherit;
 }
 
@@ -2805,7 +2861,7 @@ button.primary:hover:not(:disabled) {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--bg-alt, var(--bg));
+  background: var(--bg-alt);
   text-align: left;
   font-weight: 600;
 }
@@ -2818,7 +2874,7 @@ button.primary:hover:not(:disabled) {
 }
 
 .fk-table tbody tr:hover {
-  background: var(--bg-alt, rgba(127, 127, 127, 0.1));
+  background: var(--bg-alt);
 }
 
 .fk-row-current {
@@ -2826,7 +2882,7 @@ button.primary:hover:not(:disabled) {
 }
 
 .fk-key-cell {
-  font-family: var(--mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-weight: 600;
 }
 
@@ -2840,7 +2896,7 @@ button.primary:hover:not(:disabled) {
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--bg);
-  color: var(--accent-text, inherit);
+  color: var(--accent-text);
   cursor: pointer;
   font: inherit;
   font-size: var(--fs-sm);
@@ -3039,14 +3095,10 @@ button.grid-action.danger:hover:not(:disabled) {
 }
 
 .rd-nav-btn {
-  background: var(--bg-elev2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
+  /* A ‹ › glyph, so it keeps the larger step and its own tighter padding. */
   padding: var(--sp-1) var(--sp-3);
   font-size: var(--fs-lg);
   line-height: 1;
-  cursor: pointer;
 }
 
 .rd-nav-btn:hover:not(:disabled) {
@@ -3113,7 +3165,7 @@ button.grid-action.danger:hover:not(:disabled) {
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--bg-elev);
-  font-family: var(--mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: var(--fs-md);
   white-space: pre-wrap;
   word-break: break-word;
@@ -3134,7 +3186,7 @@ button.grid-action.danger:hover:not(:disabled) {
   border-radius: var(--r-sm);
   background: var(--bg);
   color: var(--text);
-  font-family: var(--mono, ui-monospace, monospace);
+  font-family: var(--font-mono);
   font-size: var(--fs-md);
   resize: vertical;
 }
@@ -3289,14 +3341,7 @@ button.grid-action.danger:hover:not(:disabled) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
   height: var(--h-sm);
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  background: var(--bg);
-  color: var(--fg);
-  cursor: pointer;
 }
 
 .panel-icon-btn svg {
@@ -3329,7 +3374,7 @@ button.grid-action.danger:hover:not(:disabled) {
     textarea,
     input:not([type="checkbox"], [type="radio"], [type="file"], [type="range"])
   ) {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
@@ -3367,7 +3412,7 @@ button.grid-action.danger:hover:not(:disabled) {
   padding: var(--sp-4);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  background: var(--bg-alt, transparent);
+  background: var(--bg-alt);
 }
 
 .im-form > strong {
@@ -3706,7 +3751,7 @@ button.grid-action.danger:hover:not(:disabled) {
   background: var(--bg-elev2);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  font-family: var(--mono, monospace);
+  font-family: var(--font-mono);
   font-size: var(--fs-base);
   white-space: pre;
 }
@@ -3980,8 +4025,6 @@ button.grid-action.danger:hover:not(:disabled) {
    caret drawn as an inline SVG (a neutral grey that reads on both palettes). */
 .sidebar-db .map-select {
   width: 100%;
-  appearance: none;
-  -webkit-appearance: none;
   padding: var(--sp-3) var(--sp-6) var(--sp-3) var(--sp-3);
   font-size: var(--fs-base);
   color: var(--text);
@@ -3989,10 +4032,6 @@ button.grid-action.danger:hover:not(:disabled) {
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
   cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 3.5 L5 6.5 L8 3.5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.6rem center;
-  background-size: 10px;
 }
 
 .sidebar-db .map-select:hover {
@@ -4365,13 +4404,6 @@ button.grid-action.danger:hover:not(:disabled) {
 
 .conn-io-btn {
   flex: 1;
-  background: var(--bg-elev2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: var(--sp-2) var(--sp-3);
-  font-size: var(--fs-base);
-  cursor: pointer;
 }
 
 .conn-io-btn:hover {
@@ -5036,7 +5068,7 @@ button.grid-action.danger:hover:not(:disabled) {
 .filter-op,
 .filter-conj,
 .filter-sort-pill select {
-  background: var(--bg-elev2);
+  background-color: var(--bg-elev2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);

@@ -102,6 +102,22 @@ describe("styles.css colour", () => {
     expect(hex ?? []).toEqual([]);
   });
 
+  it("references only custom properties that exist", () => {
+    // Four variables were referenced but never defined anywhere — --danger,
+    // --mono, --faint and --surface-2 — so what those rules actually painted
+    // was the fallback beside them. That is how a second red got into the
+    // palette and how the cancel button for a running query ended up with no
+    // fill at all, in the one place a button has to stay visible.
+    const RUNTIME_SET = ["--grid-row-h"]; // ResultGrid sets this inline per row height
+    const defined = new Set(
+      Array.from(CSS.matchAll(/^\s*(--[a-z0-9-]+):/gm), (m) => m[1]),
+    );
+    const missing = Array.from(
+      new Set(Array.from(CSS.matchAll(/var\((--[a-z0-9-]+)/g), (m) => m[1])),
+    ).filter((v) => !defined.has(v) && !RUNTIME_SET.includes(v));
+    expect(missing).toEqual([]);
+  });
+
   it("never gives a custom property a fallback value", () => {
     // Every `var(--x, #hex)` here fell back to the LIGHT theme's colour, so on
     // the day the variable went missing it would paint the wrong theme. The
