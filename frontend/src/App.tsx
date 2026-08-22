@@ -2472,8 +2472,12 @@ export function App() {
                       }
                       onApply={() => applyDataFilter(tab().id)}
                       onClear={() => clearDataFilter(tab().id)}
+                      /* Through withFilter, not a bare path write: the fold is
+                         now the first thing a tab's filter is asked to do, and
+                         writing `filters[id].collapsed` before anything has
+                         created `filters[id]` throws. */
                       onToggleCollapsed={() =>
-                        setFilters(tab().id, "collapsed", (v) => !v)
+                        withFilter(tab().id, (f) => ({ ...f, collapsed: !f.collapsed }))
                       }
                       onOpenSql={() => openSqlInNewTab(sqlOfTab(tab().id), tab().title)}
                     />

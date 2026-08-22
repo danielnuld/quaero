@@ -19,14 +19,19 @@ import { bulkFill } from "./support/seed";
 describeAllEngines(["sqlite", "postgres", "mysql", "informix"], (engineName) => {
   test("connects and shows the connection as open", async ({ app }) => {
     await app.open();
-    // Before connecting the interface says so, and the object actions are dead.
+    // Before connecting the interface says so, and the tools are dead. They live
+    // in the ⋯ strip now (#386), which is folded until asked.
     await expect(app.page.getByText("Sin conexión")).toBeVisible();
-    await expect(app.page.getByRole("button", { name: "Objetos" })).toBeDisabled();
+    await app.page.getByRole("button", { name: "Barra de herramientas", exact: true }).click();
+    const monitor = app.page
+      .getByRole("toolbar", { name: "Acciones" })
+      .getByRole("button", { name: "Monitor de servidor", exact: true });
+    await expect(monitor).toBeDisabled();
 
     await connect(app);
 
     await expect(app.page.getByRole("button", { name: /conectado/ })).toBeVisible();
-    await expect(app.page.getByRole("button", { name: "Objetos" })).toBeEnabled();
+    await expect(monitor).toBeEnabled();
   });
 
   test("browses to the fixture table and reads its rows", async ({ app }) => {
@@ -212,7 +217,12 @@ describeAllEngines(["sqlite", "postgres", "mysql", "informix"], (engineName) => 
     await disconnect(app.page);
 
     await expect(app.page.getByText("Sin conexión")).toBeVisible();
-    await expect(app.page.getByRole("button", { name: "Objetos" })).toBeDisabled();
+    await app.page.getByRole("button", { name: "Barra de herramientas", exact: true }).click();
+    await expect(
+      app.page
+        .getByRole("toolbar", { name: "Acciones" })
+        .getByRole("button", { name: "Monitor de servidor", exact: true }),
+    ).toBeDisabled();
     expect(engineName).toBe(app.engine.name); // the block really is this engine
   });
 });
