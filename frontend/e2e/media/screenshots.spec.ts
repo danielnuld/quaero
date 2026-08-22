@@ -131,11 +131,17 @@ test("capture the published screenshots", async ({ page }) => {
       ["Monitor de servidor", "screenshot-monitor.png", /sesi[óo]n\(es\)/i],
       ["Usuarios y permisos", "screenshot-users.png", /usuario\(s\)/i],
     ];
+    // The tools live behind the ⋯ strip now (#386), which is folded at rest —
+    // and folded again before each shot, so the images keep the same baseline
+    // chrome the app opens with.
+    const toolStrip = page.getByRole("button", { name: "Barra de herramientas", exact: true });
     for (const [button, file, ready] of tools) {
+      await toolStrip.click();
       await page
         .getByRole("toolbar", { name: "Acciones" })
         .getByRole("button", { name: button, exact: true })
         .click();
+      await toolStrip.click();
       await expect(page.getByText(ready).first()).toBeVisible({ timeout: 30_000 });
       await shot(file);
       // Escape, not a "Cerrar" button: the panels stopped printing one when the
@@ -144,7 +150,7 @@ test("capture the published screenshots", async ({ page }) => {
     }
 
     // 8. The chart view, which needs a result to chart: run a query, then chart it.
-    await page.getByRole("toolbar", { name: "Acciones" }).getByRole("button", { name: "Consulta", exact: true }).click();
+    await page.getByRole("button", { name: "Nueva consulta", exact: true }).click();
     const editor = page.getByRole("textbox", { name: "Editor SQL", exact: true });
     await editor.click();
     await page.keyboard.press("ControlOrMeta+a");

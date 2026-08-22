@@ -54,7 +54,7 @@ export const en: Record<string, string> = {
   "toolbar.actions": "Actions",
   "toolbar.launch": "Search or run",
   "toolbar.launchTitle": "Search objects, tools and actions",
-  "toolbar.tools": "Tools",
+  "toolbar.tools": "Tool bar",
   "toolbar.newQuery.label": "Query",
   "toolbar.newQuery.title": "New query",
   "toolbar.newTable.label": "Table",
