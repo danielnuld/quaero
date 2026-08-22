@@ -3824,6 +3824,14 @@ button.grid-action.danger:hover:not(:disabled) {
   font-family: var(--font-ui);
 }
 
+/* What the y axis counts, where the one-item legend used to be (issue #386). */
+.chart-axis-title {
+  fill: var(--text-dim);
+  font-size: var(--fs-sm);
+  font-family: var(--font-ui);
+  font-weight: 600;
+}
+
 .chart-line {
   stroke-width: 2;
 }
@@ -3832,6 +3840,11 @@ button.grid-action.danger:hover:not(:disabled) {
 .chart-slice {
   stroke: var(--bg-elev);
   stroke-width: 2;
+}
+
+/* Empty with a single series, and an empty flex row still spends its gap. */
+.chart-legend:empty {
+  display: none;
 }
 
 .chart-legend {
