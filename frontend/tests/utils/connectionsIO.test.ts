@@ -115,6 +115,54 @@ describe("importConnections", () => {
   });
 });
 
+// A file from another tool goes through the same merge (issue: DBeaver/Navicat
+// import). What is defended here is the routing and the honesty of the summary.
+describe("importConnections — other tools", () => {
+  const dbeaver = JSON.stringify({
+    connections: {
+      a: {
+        provider: "postgresql",
+        name: "Ventas prod",
+        configuration: { host: "db.example.com", port: "5432", database: "ventas", user: "app", password: "hunter2" },
+      },
+      b: { provider: "oracle", name: "Cobranza", configuration: { host: "orcl" } },
+    },
+  });
+
+  const navicat = `<?xml version="1.0" encoding="UTF-8"?>
+<Connections><Connection ConnectionName="SIAJ" ConnType="MySQL" Host="10.0.0.9" Port="3306" UserName="root" Password="A3F2C1"/></Connections>`;
+
+  it("imports a DBeaver file, gives it an id, and leaves the password behind", () => {
+    const out = importConnections([], dbeaver) as ImportOutcome;
+    expect(out.summary.added).toBe(1);
+    expect(out.summary.source).toBe("dbeaver");
+    expect(out.list[0].id).not.toBe("");
+    expect(out.list[0].params.password).toBeUndefined();
+  });
+
+  it("imports a Navicat file even though it is not JSON at all", () => {
+    const out = importConnections([], navicat) as ImportOutcome;
+    expect(out.summary.source).toBe("navicat");
+    expect(out.list.map((c) => c.name)).toEqual(["SIAJ"]);
+  });
+
+  it("updates a connection already saved under the same name", () => {
+    const existing = [mysql("c9", "SIAJ")];
+    const out = importConnections(existing, navicat) as ImportOutcome;
+    expect(out.summary).toMatchObject({ added: 0, updated: 1 });
+    expect(out.list).toHaveLength(1);
+    expect(out.list[0].id).toBe("c9");
+  });
+
+  it("says which tool it read, that passwords stayed behind, and what it could not map", () => {
+    const out = importConnections([], dbeaver) as ImportOutcome;
+    const text = summaryText(out.summary);
+    expect(text).toContain("DBeaver");
+    expect(text).toContain("contraseñas no se importan");
+    expect(text).toContain("oracle");
+  });
+});
+
 describe("summaryText", () => {
   it("formats the counts", () => {
     expect(summaryText({ added: 2, updated: 1, skipped: 0 })).toBe("Añadidas 2 · actualizadas 1 · omitidas 0");

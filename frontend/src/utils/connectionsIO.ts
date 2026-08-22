@@ -6,6 +6,12 @@
 // tolerant. All pure and unit-tested; the component just saves/loads the text.
 
 import {
+  detectForeign,
+  parseForeign,
+  type ForeignSource,
+  type SkippedConnection,
+} from "./foreignConnections";
+import {
   driverSchema,
   stripSecrets,
   validateConnection,
@@ -54,6 +60,10 @@ export interface ImportSummary {
   updated: number;
   /** Malformed/invalid entries dropped. */
   skipped: number;
+  /** Set when the file came from another tool (DBeaver, Navicat). */
+  source?: ForeignSource;
+  /** Entries from another tool whose engine Quaero does not ship. */
+  unsupported?: SkippedConnection[];
 }
 
 export interface ImportOutcome {
@@ -81,30 +91,50 @@ export function importConnections(
   existing: Connection[],
   raw: string,
 ): ImportOutcome | { error: string } {
-  let data: unknown;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    return { error: "El archivo no es JSON válido." };
-  }
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return { error: "Formato de archivo no reconocido." };
-  }
-  const version = (data as { version?: unknown }).version;
-  if (version !== CONNECTIONS_FILE_VERSION) {
-    return { error: `Versión de archivo no soportada (${String(version ?? "desconocida")}).` };
-  }
-  const incoming = (data as { connections?: unknown }).connections;
-  if (!Array.isArray(incoming)) {
-    return { error: "El archivo no contiene una lista de conexiones." };
+  // Another tool's file is recognised by its content, not its extension:
+  // DBeaver writes `.json` like we do, and people rename things.
+  const foreign = detectForeign(raw);
+  let incoming: unknown[];
+  const summary: ImportSummary = { added: 0, updated: 0, skipped: 0 };
+
+  if (foreign) {
+    const parsed = parseForeign(raw, foreign);
+    if ("error" in parsed) return parsed;
+    incoming = parsed.connections;
+    summary.source = foreign;
+    summary.unsupported = parsed.skipped;
+  } else {
+    let data: unknown;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return { error: "El archivo no es JSON válido." };
+    }
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return { error: "Formato de archivo no reconocido." };
+    }
+    const version = (data as { version?: unknown }).version;
+    if (version !== CONNECTIONS_FILE_VERSION) {
+      return { error: `Versión de archivo no soportada (${String(version ?? "desconocida")}).` };
+    }
+    const native = (data as { connections?: unknown }).connections;
+    if (!Array.isArray(native)) {
+      return { error: "El archivo no contiene una lista de conexiones." };
+    }
+    incoming = native;
   }
 
   let list = existing.slice();
-  const summary: ImportSummary = { added: 0, updated: 0, skipped: 0 };
 
   for (const item of incoming) {
     const c = coerceConnection(item);
-    if (!c || validateConnection(c).length > 0) {
+    // A file of ours has to be valid to come in; another tool's file only has to
+    // be recognisable. DBeaver keeps the user name in its encrypted credentials
+    // store, so half an address is the normal case there — and dropping a server
+    // because one field is missing defeats the point of not retyping thirty of
+    // them. What arrives incomplete is flagged by the connection form, which is
+    // where the password has to be typed anyway.
+    if (!c || (foreign ? !c.name.trim() : validateConnection(c).length > 0)) {
       summary.skipped += 1;
       continue;
     }
@@ -134,5 +164,16 @@ export function importConnections(
 
 /** A short human summary line for the import result. */
 export function summaryText(s: ImportSummary): string {
-  return `Añadidas ${s.added} · actualizadas ${s.updated} · omitidas ${s.skipped}`;
+  const line = `Añadidas ${s.added} · actualizadas ${s.updated} · omitidas ${s.skipped}`;
+  if (!s.source) return line;
+  const tool = s.source === "dbeaver" ? "DBeaver" : "Navicat";
+  // The password is the one thing the import cannot bring, and saying so here is
+  // cheaper than letting someone find out at the first failed connect.
+  const parts = [`${tool}: ${line}`, "las contraseñas no se importan"];
+  const unsupported = s.unsupported ?? [];
+  if (unsupported.length > 0) {
+    const engines = [...new Set(unsupported.map((u) => u.reason))].join(", ");
+    parts.push(`${unsupported.length} con motor no soportado (${engines})`);
+  }
+  return parts.join(" · ");
 }

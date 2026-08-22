@@ -154,7 +154,9 @@ export function ConnectionManager(props: ConnectionManagerProps) {
         <input
           ref={fileInput}
           type="file"
-          accept=".json,application/json"
+          /* Ours, DBeaver's data-sources.json, and Navicat's .ncx — the reader
+             tells them apart by content, so the extension is only a filter. */
+          accept=".json,.ncx,.xml,application/json,text/xml"
           style={{ display: "none" }}
           onChange={onFile}
         />
@@ -190,7 +192,16 @@ export function ConnectionManager(props: ConnectionManagerProps) {
 
       <Show
         when={props.connections.length > 0}
-        fallback={<p class="sidebar-hint">{t("conn.empty")}</p>}
+        fallback={
+          <>
+            <p class="sidebar-hint">{t("conn.empty")}</p>
+            {/* Said exactly here, and only here: someone arriving from another
+                tool has nothing saved yet, and this is the moment that decides
+                whether they retype thirty servers or import them (#391). Once
+                there are connections the line has done its job and goes away. */}
+            <p class="sidebar-hint">{t("conn.importForeign")}</p>
+          </>
+        }
       >
         <For each={groupConnections(props.connections)}>
           {(g) => (

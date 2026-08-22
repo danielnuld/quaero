@@ -67,7 +67,9 @@ en C: agregar un motor no requiere tocar el núcleo. Ver
 
 **Conectividad y plataforma**
 - **Túnel SSH** (todos los motores), **SSL/TLS** (MySQL, PostgreSQL),
-  **import/export** de conexiones guardadas.
+  **import/export** de conexiones guardadas — y también se leen las de
+  **DBeaver** (`data-sources.json`) y **Navicat** (`.ncx`), para no reteclear
+  treinta servidores al mudarse. Las contraseñas no viajan: se teclean una vez.
 - Tema **claro/oscuro** con la marca índigo, panel de **Ajustes** y **Acerca de**,
   **atajos de teclado**, menús contextuales adaptativos.
 - **Un solo ejecutable** (UI incrustada) + drivers como plugins. Sin Electron.

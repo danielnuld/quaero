@@ -49,6 +49,7 @@ export const es: Record<string, string> = {
   "conn.includePasswords": "Incluir contraseñas",
   "conn.plaintextWarn": "⚠ El archivo guardará las contraseñas en <strong>texto plano</strong>.",
   "conn.empty": "No hay conexiones guardadas.",
+  "conn.importForeign": "El botón Importar también lee el data-sources.json de DBeaver y el .ncx de Navicat.",
   "conn.moveTo": "Mover a «{group}»",
   "conn.moveToNone": "Quitar del grupo",
   "conn.failed": 'No se pudo conectar a "{name}": {detail}',
