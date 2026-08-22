@@ -156,6 +156,7 @@ import { SlowQueries } from "./components/SlowQueries";
 import { ExplainPlan } from "./components/ExplainPlan";
 import { UpdateModal } from "./components/UpdateModal";
 import { TOOL_CATALOG } from "./utils/toolCatalog";
+import { sourceLabel } from "./utils/resultFacts";
 import { IconSearch } from "./components/icons";
 import { t } from "./utils/i18n";
 import { APP_VERSION } from "./utils/version";
@@ -170,7 +171,6 @@ import { canInstall, installUpdate } from "./utils/installUpdate";
 import { ConnectionBar } from "./components/ConnectionBar";
 import { ObjectToolbar } from "./components/ObjectToolbar";
 import { ObjectListView } from "./components/ObjectListView";
-import { InfoPane } from "./components/InfoPane";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { RelatedData } from "./components/RelatedData";
 import {
@@ -2736,42 +2736,6 @@ export function App() {
                       )}
                     </Show>
                   </div>
-                  <Show
-                    when={
-                      currentResult().pageSql &&
-                      (currentResult().result?.columns.length ?? 0) > 0
-                    }
-                  >
-                    <div class="page-bar">
-                      <button
-                        class="edit-btn"
-                        disabled={(currentResult().offset ?? 0) === 0 || currentEdit().editing}
-                        onClick={() => pageBy(-1)}
-                      >
-                        {t("result.prev")}
-                      </button>
-                      <span class="page-info">
-                        {t("result.rowsRange", {
-                          from:
-                            (currentResult().offset ?? 0) +
-                            ((currentResult().result?.rows.length ?? 0) > 0 ? 1 : 0),
-                          to:
-                            (currentResult().offset ?? 0) +
-                            (currentResult().result?.rows.length ?? 0),
-                        })}
-                        <Show when={currentEdit().editing}>
-                          {t("result.pagingPaused")}
-                        </Show>
-                      </span>
-                      <button
-                        class="edit-btn"
-                        disabled={!currentResult().result?.truncated || currentEdit().editing}
-                        onClick={() => pageBy(1)}
-                      >
-                        {t("result.next")}
-                      </button>
-                    </div>
-                  </Show>
                 </div>
               </div>
             )}
@@ -3041,19 +3005,6 @@ export function App() {
             </div>
           </Show>
           </div>
-          <Show when={currentQuery()}>
-            <InfoPane
-              info={{
-                loading: currentResult().loading,
-                error: currentResult().error,
-                columns: currentResult().result?.columns.length ?? 0,
-                rows: currentResult().result?.rows.length ?? 0,
-                truncated: currentResult().result?.truncated ?? false,
-                elapsedMs: currentResult().elapsedMs,
-                source: currentResult().source ?? null,
-              }}
-            />
-          </Show>
         </section>
       </div>
 
@@ -3097,6 +3048,25 @@ export function App() {
         truncated={currentResult().result?.truncated ?? false}
         elapsedMs={currentResult().elapsedMs}
         ranScope={currentResult().ranScope ?? null}
+        object={sourceLabel(currentResult().source)}
+        columnCount={currentResult().result?.columns.length ?? null}
+        /* The pager only exists for a result that was fetched page by page, and
+           it holds still while there are unsaved cell edits: paging away would
+           drop them (issue #134). */
+        page={
+          currentResult().pageSql && (currentResult().result?.columns.length ?? 0) > 0
+            ? {
+                from:
+                  (currentResult().offset ?? 0) +
+                  ((currentResult().result?.rows.length ?? 0) > 0 ? 1 : 0),
+                to: (currentResult().offset ?? 0) + (currentResult().result?.rows.length ?? 0),
+                canPrev: (currentResult().offset ?? 0) > 0 && !currentEdit().editing,
+                canNext: !!currentResult().result?.truncated && !currentEdit().editing,
+                paused: currentEdit().editing,
+              }
+            : null
+        }
+        onPage={pageBy}
         theme={theme()}
         onToggleTheme={toggleTheme}
         onShowHelp={() => showTool("help", t("status.shortcuts"), { key: "help" })}

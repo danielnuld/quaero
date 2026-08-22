@@ -488,110 +488,6 @@ body {
   color: var(--error);
 }
 
-/* Bottom information pane (design proposal, phase 4): collapsible summary of the
-   active result. */
-.infopane {
-  flex-shrink: 0;
-  border-top: 1px solid var(--border);
-  background: var(--bg-elev);
-}
-.infopane-head {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  padding: var(--sp-2) var(--sp-3);
-  min-height: var(--h-md);
-}
-.infopane-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  background: transparent;
-  border: 0;
-  color: var(--text-dim);
-  font: inherit;
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.infopane-toggle:hover {
-  color: var(--text);
-}
-.infopane-chevron {
-  font-size: var(--fs-micro);
-}
-.infopane-summary {
-  font-size: var(--fs-base);
-  color: var(--text-dim);
-  font-variant-numeric: tabular-nums;
-}
-.infopane-tabs {
-  display: flex;
-  gap: var(--sp-1);
-}
-.infopane-tab {
-  background: transparent;
-  border: 0;
-  color: var(--text-dim);
-  font: inherit;
-  font-size: var(--fs-base);
-  font-weight: 600;
-  padding: var(--sp-1) var(--sp-3);
-  border-radius: var(--r-md);
-  cursor: pointer;
-}
-.infopane-tab:hover:not(.on) {
-  background: var(--bg-elev2);
-}
-.infopane-tab.on {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.infopane-body {
-  padding: var(--sp-3) var(--sp-4) var(--sp-4);
-  border-top: 1px solid var(--border);
-  max-height: 160px;
-  overflow: auto;
-}
-.infopane-kv {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2) var(--sp-6);
-}
-.infopane-pair {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.infopane-k {
-  font-size: var(--fs-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
-}
-.infopane-v {
-  font-size: var(--fs-md);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.infopane-msg {
-  margin: 0;
-  font-size: var(--fs-md);
-  font-family: var(--font-mono);
-}
-.infopane-msg.kind-error {
-  color: var(--error);
-}
-.infopane-msg.kind-ok {
-  color: var(--number);
-}
-.infopane-msg.kind-idle,
-.infopane-msg.kind-loading {
-  color: var(--text-dim);
-}
-
 /* Sidebar + resizer */
 .sidebar {
   background: var(--bg-elev);
@@ -1637,15 +1533,38 @@ body {
 }
 
 /* Status bar */
+/* The bar that swallowed the pager and the information pane (issue #386): one
+   28 px band at the bottom instead of three totalling 98 px. */
 .statusbar {
   display: flex;
   align-items: center;
-  gap: var(--sp-5);
-  padding: var(--sp-2) var(--sp-4);
+  gap: var(--sp-3);
+  height: var(--band-sm);
+  padding: 0 var(--sp-4);
   background: var(--bg-elev);
   border-top: 1px solid var(--border);
   font-size: var(--fs-base);
   color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+/* The three groups the bar reads as: where you are, where in the rows you are,
+   and what the run cost. The gap inside a group is tighter than between them. */
+.status-sep {
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+.status-object,
+.status-range {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-page {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
 }
 
 /* Compact controls at the right of the status bar (theme toggle, help). */
@@ -3929,22 +3848,6 @@ button.grid-action.danger:hover:not(:disabled) {
   height: 12px;
   border-radius: var(--r-sm);
   display: inline-block;
-}
-
-/* Offset pagination bar (issue #134) */
-.page-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  padding: var(--sp-2) var(--sp-3);
-  border-top: 1px solid var(--border);
-  background: var(--bg-elev);
-  flex-shrink: 0;
-}
-
-.page-info {
-  font-size: var(--fs-base);
-  color: var(--text-dim);
 }
 
 /* Entity-relationship diagram (issue #145) */

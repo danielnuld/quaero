@@ -507,30 +507,6 @@ export const en: Record<string, string> = {
   "fk.noMatch": "No row matches.",
   "fk.truncated": "only the first rows were loaded; filter to narrow",
 
-  // information pane (InfoPane.tsx + infoPane.ts derived model)
-  "info.title": "Information",
-  "info.show": "Show information",
-  "info.hide": "Hide information",
-  "info.general": "General",
-  "info.messages": "Messages",
-  "info.kObject": "Object",
-  "info.kPrimaryKey": "Primary key",
-  "info.pkReadOnly": "— (read-only)",
-  "info.kRows": "Rows",
-  "info.kColumns": "Columns",
-  "info.kTruncated": "Truncated",
-  "info.truncYes": "yes (more pages)",
-  "info.truncNo": "no",
-  "info.kDuration": "Duration",
-  "info.idle": "No results yet.",
-  "info.okText": "Success: {rows} row(s){dur}{more}.",
-  "info.inDuration": " in {d}",
-  "info.moreTruncated": " (truncated — more pages)",
-  "info.lastOpError": "Error in the last operation",
-  "info.noResults": "No results",
-  "info.rowsShort": "{rows} row(s)",
-  "info.truncShort": "truncated",
-
   // errors
   "error.noActiveConn": "No active connection. Open a connection to run queries.",
 
@@ -542,6 +518,7 @@ export const en: Record<string, string> = {
   "status.noConnection": "Not connected",
   "status.rowsOne": "{n} row",
   "status.rowsOther": "{n} rows",
+  "status.columns": "{n} columns",
   "status.scopeTitle": "Scope of the last run",
   "status.durationTitle": "Duration of the last run",
   "status.marked": "{n} selected",
