@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  applyCredentials,
   detectForeign,
   driverFor,
   parseDbeaver,
@@ -8,9 +9,9 @@ import {
 
 // Reading the connection lists of DBeaver and Navicat, so migrating does not
 // start with retyping thirty servers. What these tests pin is the two rules the
-// module exists for: passwords never come across, and an entry is only dropped
-// when it is genuinely unusable — never because a version of the format spelled
-// a field differently.
+// module exists for: a connection arrives whole — password included, when the
+// file has one this can read — and an entry is only ever dropped when it is
+// genuinely unusable, never because a version spelled a field differently.
 
 const DBEAVER = JSON.stringify({
   folders: { Prod: {} },
@@ -106,15 +107,21 @@ describe("parseDbeaver", () => {
       name: "Ventas prod",
       driver: "postgres",
       group: "Prod",
-      params: { host: "db.example.com", port: "5432", database: "ventas", user: "app" },
+      params: {
+        host: "db.example.com",
+        port: "5432",
+        database: "ventas",
+        user: "app",
+        password: "hunter2",
+      },
     });
   });
 
-  it("never brings the password across, even when the file has it in the clear", () => {
-    for (const c of parsed().connections) {
-      expect(Object.keys(c.params)).not.toContain("password");
-      expect(JSON.stringify(c)).not.toContain("hunter2");
-    }
+  it("takes a password the file left in the clear", () => {
+    // Some DBeaver versions keep it right in data-sources.json; the rest put it
+    // in credentials-config.json, which applyCredentials() fills in.
+    expect(parsed().connections[0].params.password).toBe("hunter2");
+    expect(parsed().connections[1].params.password).toBeUndefined();
   });
 
   it("keeps a connection whose user is missing", () => {
@@ -175,14 +182,14 @@ describe("parseDbeaver", () => {
 });
 
 describe("parseNavicat", () => {
-  const parsed = () => {
-    const r = parseNavicat(NAVICAT);
+  const parsed = async () => {
+    const r = await parseNavicat(NAVICAT);
     if ("error" in r) throw new Error(r.error);
     return r;
   };
 
-  it("reads every connection it can, with its SSH tunnel", () => {
-    const { connections } = parsed();
+  it("reads every connection it can, with its SSH tunnel", async () => {
+    const { connections } = await parsed();
     expect(connections.map((c) => c.name)).toEqual(["SIAJ", "Reportes", "Local"]);
     expect(connections[0]).toEqual({
       id: "",
@@ -201,21 +208,54 @@ describe("parseNavicat", () => {
     });
   });
 
-  it("leaves the encrypted password where it found it", () => {
-    expect(JSON.stringify(parsed().connections)).not.toContain("A3F2C1");
+  it("counts a password it cannot read instead of storing the ciphertext", async () => {
+    // "A3F2C1" is not a Navicat 12 blob — the reader must not pass it through.
+    const r = await parsed();
+    expect(JSON.stringify(r.connections)).not.toContain("A3F2C1");
+    expect(r.locked).toBe(1);
   });
 
-  it("puts a SQLite file in the path field", () => {
-    expect(parsed().connections[2].params).toEqual({ path: "/home/d/n.db" });
+  it("puts a SQLite file in the path field", async () => {
+    expect((await parsed()).connections[2].params).toEqual({ path: "/home/d/n.db" });
   });
 
-  it("reports an engine it cannot map", () => {
-    expect(parsed().skipped).toEqual([{ name: "Nómina", reason: "SQL Server" }]);
+  it("reports an engine it cannot map", async () => {
+    expect((await parsed()).skipped).toEqual([{ name: "Nómina", reason: "SQL Server" }]);
   });
 
-  it("refuses a file that is not one of Navicat's", () => {
-    expect(parseNavicat("<Connections></Connections>")).toEqual({
+  it("refuses a file that is not one of Navicat's", async () => {
+    expect(await parseNavicat("<Connections></Connections>")).toEqual({
       error: "El archivo de Navicat no contiene conexiones.",
     });
+  });
+});
+
+// Issue #391: DBeaver keeps user and password in a second, encrypted file, keyed
+// by its own connection id — which is why the reader carries that id along.
+describe("applyCredentials", () => {
+  const base = () => {
+    const r = parseDbeaver(DBEAVER);
+    if ("error" in r) throw new Error(r.error);
+    return r;
+  };
+
+  it("fills the password in, matched by DBeaver's own id", () => {
+    const out = applyCredentials(base(), {
+      "mysql8-1a2b": { user: "root", password: "s3cr3t" },
+    });
+    expect(out.connections[1].params).toMatchObject({ user: "root", password: "s3cr3t" });
+    // A connection the credentials file says nothing about is left alone.
+    expect(out.connections[0].params.password).toBe("hunter2");
+  });
+
+  it("does not overwrite a user the connection file already had", () => {
+    const out = applyCredentials(base(), { "postgres-jdbc-18f2": { user: "otro", password: "p" } });
+    expect(out.connections[0].params.user).toBe("app");
+    // The credentials file is the newer word on the password, though.
+    expect(out.connections[0].params.password).toBe("p");
+  });
+
+  it("is a no-op when there are no credentials to apply", () => {
+    expect(applyCredentials(base(), {})).toEqual(base());
   });
 });

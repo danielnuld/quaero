@@ -6,11 +6,13 @@
 // tolerant. All pure and unit-tested; the component just saves/loads the text.
 
 import {
+  applyCredentials,
   detectForeign,
   parseForeign,
   type ForeignSource,
   type SkippedConnection,
 } from "./foreignConnections";
+import { dbeaverCredentials } from "./foreignSecrets";
 import {
   driverSchema,
   stripSecrets,
@@ -64,6 +66,10 @@ export interface ImportSummary {
   source?: ForeignSource;
   /** Entries from another tool whose engine Quaero does not ship. */
   unsupported?: SkippedConnection[];
+  /** Passwords brought across from the other tool. */
+  passwords?: number;
+  /** Passwords the other tool had but this could not read. */
+  locked?: number;
 }
 
 export interface ImportOutcome {
@@ -87,10 +93,12 @@ const norm = (s: string) => s.trim().toLowerCase();
  *  - Entries that are malformed or fail validation (unknown driver, missing
  *    required field, blank name) are skipped.
  */
-export function importConnections(
+export async function importConnections(
   existing: Connection[],
   raw: string,
-): ImportOutcome | { error: string } {
+  /** DBeaver's `credentials-config.json`, when the user picked it too. */
+  credentials?: ArrayBuffer,
+): Promise<ImportOutcome | { error: string }> {
   // Another tool's file is recognised by its content, not its extension:
   // DBeaver writes `.json` like we do, and people rename things.
   const foreign = detectForeign(raw);
@@ -98,11 +106,22 @@ export function importConnections(
   const summary: ImportSummary = { added: 0, updated: 0, skipped: 0 };
 
   if (foreign) {
-    const parsed = parseForeign(raw, foreign);
+    let parsed = await parseForeign(raw, foreign);
     if ("error" in parsed) return parsed;
+    if (credentials && foreign === "dbeaver") {
+      parsed = applyCredentials(parsed, await dbeaverCredentials(credentials));
+    }
     incoming = parsed.connections;
     summary.source = foreign;
     summary.unsupported = parsed.skipped;
+    summary.passwords = parsed.connections.filter((c) => !!c.params.password).length;
+    // What the other tool had locked away and we could not open: an old Navicat
+    // file, or a DBeaver export whose credentials file was not picked.
+    summary.locked =
+      parsed.locked +
+      (foreign === "dbeaver" && !credentials
+        ? parsed.connections.filter((c) => !c.params.password).length
+        : 0);
   } else {
     let data: unknown;
     try {
@@ -167,9 +186,11 @@ export function summaryText(s: ImportSummary): string {
   const line = `Añadidas ${s.added} · actualizadas ${s.updated} · omitidas ${s.skipped}`;
   if (!s.source) return line;
   const tool = s.source === "dbeaver" ? "DBeaver" : "Navicat";
-  // The password is the one thing the import cannot bring, and saying so here is
-  // cheaper than letting someone find out at the first failed connect.
-  const parts = [`${tool}: ${line}`, "las contraseñas no se importan"];
+  const parts = [`${tool}: ${line}`];
+  // Which passwords came and which did not, because finding that out at the
+  // first failed connect is the expensive way to learn it.
+  if (s.passwords) parts.push(`${s.passwords} con contraseña`);
+  if (s.locked) parts.push(`${s.locked} sin contraseña`);
   const unsupported = s.unsupported ?? [];
   if (unsupported.length > 0) {
     const engines = [...new Set(unsupported.map((u) => u.reason))].join(", ");

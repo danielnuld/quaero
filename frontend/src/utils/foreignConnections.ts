@@ -2,17 +2,14 @@
 // does not start with retyping thirty servers by hand. Two formats:
 //
 //   - DBeaver's `data-sources.json` (the workspace file, or the one its
-//     "Export connections" produces).
-//   - Navicat's `.ncx` export (XML).
+//     "Export connections" produces), optionally paired with the
+//     `credentials-config.json` that sits beside it.
+//   - Navicat's `.ncx` export (XML), which carries its passwords inline.
 //
-// What is imported is the ADDRESS of each connection — engine, host, port,
-// database, user, and the SSH tunnel when there is one. **Passwords are never
-// read**, and that is deliberate rather than a gap: both tools keep them
-// encrypted in a separate store (DBeaver in `credentials-config.json`, Navicat
-// in the attribute itself), and decrypting another product's credential vault to
-// copy secrets into ours is not a thing this app should do quietly. Quaero's own
-// export defaults to omitting passwords for the same reason. They are typed once
-// at the first connect.
+// What is imported is the whole connection: engine, host, port, database, user,
+// the SSH tunnel when there is one, and the password when the file has one this
+// can read (see foreignSecrets.ts for what "can read" means and why it is
+// allowed to). A password that cannot be read is reported, never guessed.
 //
 // Both parsers are deliberately tolerant. These are other people's formats,
 // they differ across versions, and a strict reader that drops a connection
@@ -21,6 +18,7 @@
 // of aliases, case-insensitively.
 
 import type { Connection } from "./connections";
+import { navicatPassword, type ForeignCredential } from "./foreignSecrets";
 
 export type ForeignSource = "dbeaver" | "navicat";
 
@@ -32,9 +30,16 @@ export interface SkippedConnection {
 
 export interface ForeignImport {
   source: ForeignSource;
-  /** Ready to merge: no id (the merge assigns one) and no password. */
+  /** Ready to merge: no id of ours (the merge assigns one). */
   connections: Connection[];
+  /**
+   * The foreign id of each connection, in the same order. DBeaver keys its
+   * credentials file by it, which is the only way to pair the two files.
+   */
+  ids: string[];
   skipped: SkippedConnection[];
+  /** How many passwords were there but could not be read. */
+  locked: number;
 }
 
 /**
@@ -138,11 +143,11 @@ export function parseDbeaver(raw: string): ForeignImport | { error: string } {
     return { error: "El archivo de DBeaver no contiene conexiones." };
   }
 
-  // Folder ids map to their own names; DBeaver stores the folder as a path.
   const out: Connection[] = [];
+  const ids: string[] = [];
   const skipped: SkippedConnection[] = [];
 
-  for (const entry of Object.values(conns as Record<string, unknown>)) {
+  for (const [foreignId, entry] of Object.entries(conns as Record<string, unknown>)) {
     if (!entry || typeof entry !== "object") continue;
     const e = entry as Record<string, unknown>;
     const cfg = (e.configuration && typeof e.configuration === "object"
@@ -167,6 +172,9 @@ export function parseDbeaver(raw: string): ForeignImport | { error: string } {
       put(params, "port", pick(cfg, ["port"]));
       put(params, "database", pick(cfg, ["database"]));
       put(params, "user", pick(cfg, ["user", "userName", "username"]));
+      // Some versions leave the password right here in the clear; the rest keep
+      // it in credentials-config.json, which applyCredentials() fills in later.
+      put(params, "password", pick(cfg, ["password"]));
       if (driver === "informix") put(params, "server", pick(cfg, ["server", "serverName"]));
     }
 
@@ -198,9 +206,33 @@ export function parseDbeaver(raw: string): ForeignImport | { error: string } {
       params,
       ...(pick(e, ["folder"]) ? { group: pick(e, ["folder"]) } : {}),
     });
+    ids.push(foreignId);
   }
 
-  return { source: "dbeaver", connections: out, skipped };
+  return { source: "dbeaver", connections: out, ids, skipped, locked: 0 };
+}
+
+/**
+ * Fills in what `credentials-config.json` holds, matched by DBeaver's own id.
+ *
+ * Returns how many connections still have a password stored over there that
+ * this could not read — an empty map because the file was not given, or because
+ * the key no longer opens it. Zero is the only number worth not mentioning.
+ */
+export function applyCredentials(
+  imported: ForeignImport,
+  creds: Record<string, ForeignCredential>,
+): ForeignImport {
+  if (Object.keys(creds).length === 0) return imported;
+  const connections = imported.connections.map((c, i) => {
+    const cred = creds[imported.ids[i]];
+    if (!cred) return c;
+    const params = { ...c.params };
+    if (cred.user && !params.user) params.user = cred.user;
+    if (cred.password) params.password = cred.password;
+    return { ...c, params };
+  });
+  return { ...imported, connections };
 }
 
 /**
@@ -211,7 +243,7 @@ export function parseDbeaver(raw: string): ForeignImport | { error: string } {
  * is `Database` here and `DatabaseFileName` there — so every field goes through
  * the alias list.
  */
-export function parseNavicat(raw: string): ForeignImport | { error: string } {
+export async function parseNavicat(raw: string): Promise<ForeignImport | { error: string }> {
   let doc: Document;
   try {
     doc = new DOMParser().parseFromString(raw, "application/xml");
@@ -231,6 +263,7 @@ export function parseNavicat(raw: string): ForeignImport | { error: string } {
 
   const out: Connection[] = [];
   const skipped: SkippedConnection[] = [];
+  let locked = 0;
 
   for (const el of nodes) {
     const attrs: Record<string, string> = {};
@@ -254,6 +287,15 @@ export function parseNavicat(raw: string): ForeignImport | { error: string } {
       put(params, "port", pick(attrs, ["Port"]));
       put(params, "database", pick(attrs, ["Database", "DatabaseName", "DefaultDatabase", "InitialDatabase"]));
       put(params, "user", pick(attrs, ["UserName", "User"]));
+      // Navicat 12+ hex-encodes the password with the key that ships in libcc;
+      // an older file decrypts to bytes that are not text, and is counted rather
+      // than stored as somebody's password.
+      const stored = pick(attrs, ["Password", "Pwd"]);
+      if (stored !== "") {
+        const clear = await navicatPassword(stored);
+        if (clear === null) locked += 1;
+        else put(params, "password", clear);
+      }
     }
 
     sshParams(
@@ -266,13 +308,20 @@ export function parseNavicat(raw: string): ForeignImport | { error: string } {
     out.push({ id: "", name, driver, params });
   }
 
-  return { source: "navicat", connections: out, skipped };
+  // Navicat has no id of its own in the export; the name is what it goes by.
+  return {
+    source: "navicat",
+    connections: out,
+    ids: out.map((c) => c.name),
+    skipped,
+    locked,
+  };
 }
 
 /** Parse whichever of the two formats this is. */
 export function parseForeign(
   raw: string,
   source: ForeignSource,
-): ForeignImport | { error: string } {
-  return source === "dbeaver" ? parseDbeaver(raw) : parseNavicat(raw);
+): Promise<ForeignImport | { error: string }> {
+  return source === "dbeaver" ? Promise.resolve(parseDbeaver(raw)) : parseNavicat(raw);
 }
