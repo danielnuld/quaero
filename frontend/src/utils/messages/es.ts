@@ -23,7 +23,6 @@ export const es: Record<string, string> = {
   "related.truncated": "⚠ El catálogo devolvió más relaciones de las que caben en una consulta: la lista puede estar incompleta.",
   "related.rows": "{n} filas",
   "related.openTab": "Abrir en pestaña",
-  "related.toEditor": "Enviar al editor",
   "related.refColumn": "Columna referenciada por otras tablas",
   "related.cellArrow": "Ver los datos relacionados con este valor",
   "related.parentTag": "referencia",
