@@ -85,9 +85,9 @@ static void on_plugin_loaded(dbc_plugin *plugin, void *ctx)
     const dbc_driver_t *drv = dbc_plugin_driver(plugin);
     if (dbcore_runtime_register_driver(rt, drv) == DBC_OK) {
         g_plugins.push_back(plugin);
-        std::printf("Quaero: loaded driver '%s'\n", drv->name);
+        std::printf("Squaero: loaded driver '%s'\n", drv->name);
     } else {
-        std::fprintf(stderr, "Quaero: failed to register driver '%s'\n",
+        std::fprintf(stderr, "Squaero: failed to register driver '%s'\n",
                      drv != nullptr ? drv->name : "(unknown)");
         dbc_plugin_unload(plugin);
     }
@@ -99,7 +99,7 @@ static void on_plugin_error(const char *path, dbc_status status,
 {
     (void)status;
     (void)ctx;
-    std::fprintf(stderr, "Quaero: skipped plugin '%s': %s\n", path,
+    std::fprintf(stderr, "Squaero: skipped plugin '%s': %s\n", path,
                  message != nullptr ? message : "unknown error");
 }
 
@@ -110,22 +110,22 @@ static void load_drivers()
 {
     dbcore_runtime *rt = dbcore_runtime_get();
     if (rt == nullptr) {
-        std::fprintf(stderr, "Quaero: runtime unavailable; no drivers loaded\n");
+        std::fprintf(stderr, "Squaero: runtime unavailable; no drivers loaded\n");
         return;
     }
     std::string dir = executable_dir();
     if (dir.empty()) {
-        std::fprintf(stderr, "Quaero: could not resolve executable directory\n");
+        std::fprintf(stderr, "Squaero: could not resolve executable directory\n");
         return;
     }
     std::string drivers = dir + "/drivers";
     int loaded = dbc_plugin_scan_dir(drivers.c_str(), on_plugin_loaded,
                                      on_plugin_error, rt);
     if (loaded < 0) {
-        std::fprintf(stderr, "Quaero: no drivers directory at %s\n",
+        std::fprintf(stderr, "Squaero: no drivers directory at %s\n",
                      drivers.c_str());
     } else {
-        std::printf("Quaero: %d driver(s) registered\n", loaded);
+        std::printf("Squaero: %d driver(s) registered\n", loaded);
     }
 }
 
@@ -273,7 +273,7 @@ static void rpc_handler(const char *id, const char *req, void *arg)
     static bool first_call = true;
     if (first_call) {
         first_call = false;
-        std::printf("Quaero: frontend connected to the bridge\n");
+        std::printf("Squaero: frontend connected to the bridge\n");
 #if defined(_WIN32)
         // The interface has booted: swap the window's own background for it.
         reveal_ui(w);
@@ -337,6 +337,12 @@ static void load_frontend(webview_t w)
                 SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appdata))) {
             break;
         }
+        // %APPDATA%\Quaero — NOT renamed with the product (issue #466). This
+        // folder is the WebView2 user-data directory, and the browser profile
+        // inside it holds the localStorage of https://quaero.local: every
+        // connection, snippet, notebook and setting the user has. A new path is
+        // a new empty profile, and nothing can migrate the old one — it belongs
+        // to an origin the page can no longer reach.
         std::wstring dir = std::wstring(appdata) + L"\\Quaero\\ui";
         SHCreateDirectoryExW(nullptr, dir.c_str(), nullptr);
         std::wstring file = dir + L"\\index.html";
@@ -379,11 +385,11 @@ static void load_frontend(webview_t w)
             break;
         }
         webview_navigate(w, "https://quaero.local/index.html");
-        std::printf("Quaero: UI served from https://quaero.local (persistent)\n");
+        std::printf("Squaero: UI served from https://quaero.local (persistent)\n");
         return;
     } while (0);
     std::fprintf(stderr,
-                 "Quaero: virtual-host setup failed; falling back to set_html "
+                 "Squaero: virtual-host setup failed; falling back to set_html "
                  "(settings will not persist across restarts)\n");
 #endif
     webview_set_html(w, html);
@@ -550,7 +556,7 @@ static void apply_startup_background(webview_t w)
     HRESULT hr = controller->QueryInterface(IID_ICoreWebView2Controller2,
                                             reinterpret_cast<void **>(&controller2));
     if (!SUCCEEDED(hr) || controller2 == nullptr) {
-        std::printf("Quaero: webview background not settable (older runtime)\n");
+        std::printf("Squaero: webview background not settable (older runtime)\n");
         return;  /* older WebView2 runtime: the class brush alone still helps */
     }
     COREWEBVIEW2_COLOR bg = {255, GetRValue(color), GetGValue(color), GetBValue(color)};
@@ -651,7 +657,7 @@ struct UpdateResult {
 };
 
 // UI thread: resolve/reject the JS promise; on success launch the MSI and quit
-// (a running quaero.exe would block the installer from replacing it).
+// (a running squaero.exe would block the installer from replacing it).
 static void finish_update(webview_t w, void *arg)
 {
     auto *r = static_cast<UpdateResult *>(arg);
@@ -724,7 +730,7 @@ int main()
     // shell's output is redirected to a file or journal.
     std::setvbuf(stdout, nullptr, _IONBF, 0);
 
-    std::printf("Quaero %s — starting webview shell\n", dbcore_version());
+    std::printf("Squaero %s — starting webview shell\n", dbcore_version());
 
     // Register driver plugins before the UI opens so conn.open can resolve them.
     load_drivers();
@@ -732,11 +738,11 @@ int main()
     webview_t w = webview_create(0, nullptr);
     if (w == nullptr) {
         std::fprintf(stderr,
-                     "Quaero: failed to create the webview window "
+                     "Squaero: failed to create the webview window "
                      "(is the WebView2/WebKit runtime available?)\n");
         return 1;
     }
-    webview_set_title(w, "Quaero");
+    webview_set_title(w, "Squaero");
 #if defined(_WIN32)
     apply_window_icon(w);
     apply_startup_background(w);
