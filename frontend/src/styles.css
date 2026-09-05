@@ -2650,6 +2650,18 @@ button.primary:hover:not(:disabled) {
   background: var(--bg-elev2);
 }
 
+/* The tools trigger is an inline SVG now (issue #473): sized like the glyphs it
+   sits beside, and centred, since an SVG has no text baseline to align to. */
+.objtree-refresh {
+  display: inline-flex;
+  align-items: center;
+}
+.objtree-refresh svg {
+  width: var(--fs-lg);
+  height: var(--fs-lg);
+  display: block;
+}
+
 .objtree-filter {
   display: flex;
   align-items: center;

@@ -825,7 +825,7 @@ export function App() {
     setTabs((s) =>
       openTool(s, tool, title, { connDefId: focusedDefId() ?? undefined, ...opts }),
     );
-  // The sidebar tools live behind a single 🧰 button in the object-tree header
+  // The sidebar tools live behind a single wrench button in the object-tree header
   // now (the always-open list was removed in the Explorer-first layout): open a
   // context menu of the tool catalog, each launching its tool tab.
   const openToolsMenu = (e: MouseEvent) => {
