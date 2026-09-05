@@ -57,7 +57,7 @@ import {
   applyTheme,
   type ThemePref,
 } from "./utils/theme";
-import { loadSkin, saveSkin, applySkin, type SkinPref } from "./utils/skin";
+import { loadSkin, saveSkin, applySkin, isDarkOnly, type SkinPref } from "./utils/skin";
 import { matchShortcut } from "./utils/shortcuts";
 import { ShortcutsHelp } from "./components/ShortcutsHelp";
 import {
@@ -491,18 +491,21 @@ export function App() {
     setTheme(pref);
     saveTheme(pref, safeStorage());
     if (typeof document !== "undefined") {
-      applyTheme(pref, document.documentElement, prefersDark());
+      applyTheme(pref, document.documentElement, prefersDark(), isDarkOnly(skin()));
     }
   };
   const toggleTheme = () => applyThemePref(nextTheme(theme()));
 
-  // Accent skin (indigo brand vs an alternate blue), orthogonal to light/dark.
+  // Colour theme: the accent skins (indigo/blue) layer over light or dark; the
+  // three that bring their own surfaces (issue #473) hold it at dark for as long
+  // as they are picked — hence re-applying the theme here, not just the skin.
   const [skin, setSkin] = createSignal<SkinPref>(loadSkin(safeStorage()));
   const applySkinPref = (s: SkinPref) => {
     setSkin(s);
     saveSkin(s, safeStorage());
     if (typeof document !== "undefined") {
       applySkin(s, document.documentElement);
+      applyTheme(theme(), document.documentElement, prefersDark(), isDarkOnly(s));
     }
   };
 
@@ -586,13 +589,13 @@ export function App() {
 
   onMount(() => {
     if (typeof document !== "undefined") {
-      applyTheme(theme(), document.documentElement, prefersDark());
       applySkin(skin(), document.documentElement);
+      applyTheme(theme(), document.documentElement, prefersDark(), isDarkOnly(skin()));
     }
     // Follow the OS live while the preference is "system".
     const onSystemChange = () => {
       if (theme() === "system" && typeof document !== "undefined") {
-        applyTheme("system", document.documentElement, prefersDark());
+        applyTheme("system", document.documentElement, prefersDark(), isDarkOnly(skin()));
       }
     };
     const mql =
