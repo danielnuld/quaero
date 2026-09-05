@@ -250,6 +250,7 @@ export const es: Record<string, string> = {
   "filter.summaryConds": "{n} condición(es)",
   "filter.summarySort": "{n} orden(es)",
   "filter.addCond": "+ condición",
+  "filter.addCondHint": "Añadir otra condición (Shift+Enter)",
   "filter.removeCond": "Quitar la condición",
   "filter.column": "Columna",
   "filter.pickColumn": "Elegir columna…",

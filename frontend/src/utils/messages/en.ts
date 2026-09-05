@@ -247,6 +247,7 @@ export const en: Record<string, string> = {
   "filter.summaryConds": "{n} condition(s)",
   "filter.summarySort": "{n} sort(s)",
   "filter.addCond": "+ condition",
+  "filter.addCondHint": "Add another condition (Shift+Enter)",
   "filter.removeCond": "Remove the condition",
   "filter.column": "Column",
   "filter.pickColumn": "Pick a column…",
