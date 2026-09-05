@@ -122,24 +122,27 @@
    está medido, no estimado. Lo que NO cambia son los chips de tipo (--obj-*):
    llevan tinta oscura sobre color propio, así que un juego sirve para todas.
 
-   Ciruela: rosa oscuro. El tinte vive en el cromo — el lienzo de datos se
-   queda casi neutro, que es lo que un rosa claro no consigue. */
+   Ciruela: rosa oscuro. El tinte vive sobre todo en el cromo — árbol, cabeceras
+   y barras van en ciruela y el lienzo de datos se queda por debajo, que es lo
+   que un rosa claro no consigue. Subido de tono respecto a la primera versión:
+   sobre la app real el acento cubre poca superficie, así que el color tiene que
+   estar en las superficies o el tema no se lee como rosa. */
 :root[data-skin="ciruela"] {
-  --bg: #1b1319;
-  --bg-elev: #241a21;
-  --bg-elev2: #2e2029;
-  --border: #46333e;
-  --text: #f2e4ec;
-  --text-dim: #b394a4;
+  --bg: #20141b;
+  --bg-elev: #2b1a25;
+  --bg-elev2: #3a2231;
+  --border: #573349;
+  --text: #f7e6ef;
+  --text-dim: #c39cae;
   --accent: #ff8ec2;
-  --accent-fg: #1b1319;
+  --accent-fg: #20141b;
   --accent-hover: #ffb3d5;
   --accent-text: #ff9ecb;
   --null: #e2a05e;
   --number: #83d9b1;
   --error: #ff9494;
-  --error-fg: #1b1319;
-  --bg-overlay: #2e2029;
+  --error-fg: #20141b;
+  --bg-overlay: #3a2231;
   --focus-ring: rgba(255, 142, 194, 0.4);
 }
 
